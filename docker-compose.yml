@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Broker de Mensajería
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: erp_rabbitmq
+    ports:
+      - "5672:5672"   # Puerto de comunicación para NestJS
+      - "15672:15672" # Panel web de administración
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: superadmin123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # Sistema de Caché
+  redis:
+    image: redis:alpine
+    container_name: erp_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+  redis_data:
