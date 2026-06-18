@@ -1,134 +1,96 @@
-# 🛒 ERP Supermercado - Arquitectura de Microservicios (Grupo 10)
+# 🛒 ERP SuperMarket Bolivia S.A. - Práctica 3 (Grupo 10)
 
-Bienvenido al repositorio central del ERP/POS para la cadena de supermercados. Este proyecto utiliza una arquitectura de **Microservicios** y está gestionado como un **Monorepo**.
+Bienvenido al repositorio central de la plataforma distribuida para la cadena de supermercados "Abuelita Serafina SuperMarket Bolivia S.A.". Este proyecto implementa una **Arquitectura de Microservicios orientada a eventos** (Event-Driven Architecture) gestionada como un Monorepo.
 
 ## 🛠️ Stack Tecnológico
-* **Frontend (Panel Web):** Next.js (TypeScript, Tailwind CSS)
-* **Frontend (Punto de Venta / POS):** Flutter
-* **Backend (Microservicios):** NestJS
-* **Base de Datos:** Supabase (PostgreSQL) usando Schemas separados.
-* **Mensajería Asíncrona:** RabbitMQ
-* **Caché:** Redis
+* **Frontend (Panel y POS):** Next.js (Web) y Flutter (Escritorio/Móvil)
+* **Backend (Microservicios):** NestJS (TypeScript)
+* **API Gateway:** NestJS
+* **Base de Datos:** Supabase (PostgreSQL) con aislamiento total mediante `SCHEMAS` independientes por servicio.
+* **Comunicación Síncrona:** API REST (Exclusivo para consultas `GET` y validaciones cruzadas).
+* **Comunicación Asíncrona (Mensajería):** RabbitMQ (Para propagación de eventos y modificaciones de estado).
+* **Seguridad:** Tokens JWT (Obligatorio en todos los endpoints).
 * **Infraestructura Local:** Docker & Docker Compose
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Estructura de Microservicios (Equipos)
 
-El repositorio está dividido en dos directorios principales para mantener separadas las dependencias de las interfaces gráficas y las APIs:
+La arquitectura está dividida estrictamente según los requerimientos del dominio. **Está prohibido compartir tablas entre servicios**.
 
 ```text
 erp-supermercado/
-├── apps/                    # Aplicaciones Cliente
-│   ├── web-admin/           # Panel administrativo (Next.js)
-│   └── pos-app/             # Aplicación de cajeras y almacén (Flutter)
-├── microservices/           # Backend e Infraestructura
-│   ├── api-gateway/         # Puerta de enlace (NestJS)
-│   ├── ms-ventas/           # MS de Ventas y Facturación (NestJS)
-│   ├── ms-inventario/       # MS de Inventario y Almacenes (NestJS)
-│   ├── ms-compras/          # MS de Compras y Proveedores (NestJS)
-│   ├── ms-finanzas/         # MS Financiero y Pagos (NestJS)
-│   └── ms-rrhh/             # MS de Recursos Humanos (NestJS)
-├── docker-compose.yml       # Orquestación de infraestructura local
-├── .env.example             # Plantilla de variables de entorno
-└── README.md                # Este archivo
+├── apps/                          # Aplicaciones Cliente
+│   ├── web-admin/                 # Panel administrativo (Next.js)
+│   └── pos-app/                   # Aplicación de Punto de Venta (Flutter)
+├── microservices/                 # Backend e Infraestructura
+│   ├── api-gateway/               # Puerta de enlace pública
+│   ├── auth-service/              # Shared: JWT, Usuarios, Roles y Permisos
+│   ├── company-service/           # Shared: Compañías, Sucursales y Ciudades
+│   ├── product-service/           # Equipo 1: Catálogo, Categorías y Marcas
+│   ├── inventory-service/         # Equipo 2: Stock, Ingresos, Kardex y Carga Excel
+│   ├── sales-service/             # Equipo 3: Transacciones, Pagos y Comprobantes
+│   ├── customer-service/          # Equipo 4: Clientes, Historial y Fidelización
+│   └── notification-service/      # Equipo 5: Simulador de envíos (WhatsApp, SMS, Correo)
+├── docker-compose.yml             # Orquestación de infraestructura local
+├── .env.example                   # Plantilla de variables de entorno
+└── README.md                      # Este archivo
 ```
 
 ---
 
-## 🚀 1. Configuración Inicial (Para todos los miembros)
+## 🚀 1. Configuración Inicial y Arranque Local
 
 ### Prerrequisitos
-Antes de empezar, asegúrate de tener instalados:
-* [Node.js](https://nodejs.org/) (v18+)
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Asegúrate de que el motor de Docker esté activo).
-* [Flutter SDK](https://docs.flutter.dev/get-started/install) (Solo para quienes desarrollen la aplicación POS).
+* Node.js (v18+)
+* Docker Desktop (Activo en segundo plano)
+* Flutter SDK (Para el desarrollo del POS)
 
-### Clonar y Configurar Variables
-1. Clona este repositorio:
-   ```bash
-   git clone <URL_DEL_REPOSITORIO>
-   cd erp-supermercado
-   ```
-2. Crea un archivo `.env` en la raíz del proyecto basándote en el archivo de ejemplo:
-   ```bash
-   cp .env.example .env
-   ```
-   *(Solicita las credenciales de conexión de Supabase al administrador de la base de datos para agregarlas a tu `.env`).*
+### Levantar Infraestructura Base
+Para que los microservicios puedan comunicarse mediante eventos asíncronos, necesitamos levantar RabbitMQ localmente.
 
----
-
-## 🐳 2. Levantar la Infraestructura (Docker)
-
-Para que los microservicios puedan comunicarse de manera asíncrona y gestionar la caché, necesitamos levantar **RabbitMQ** y **Redis** localmente.
-
-En la raíz del proyecto, ejecuta el siguiente comando:
 ```bash
 docker-compose up -d
 ```
-* **RabbitMQ Panel:** Disponible en `http://localhost:15672` (Usuario: `admin` | Pass: `superadmin123`)
-* **Redis:** Corriendo localmente en el puerto `6379`.
+* **Panel RabbitMQ:** `http://localhost:15672` (Usuario: `admin` | Pass: `superadmin123`)
 
-Para detener los servicios al finalizar tu jornada de desarrollo ejecuta: `docker-compose down`.
-
----
-
-## 🏗️ 3. Guía: Cómo crear y configurar un nuevo Microservicio
-
-Si eres el encargado de un dominio y tu carpeta en `microservices/` aún no ha sido inicializada, sigue estos pasos:
-
-1. Navega a la carpeta de microservicios desde la raíz:
-   ```bash
-   cd microservices
-   ```
-2. Genera el esqueleto del proyecto usando el CLI de NestJS (reemplaza `ms-tu-modulo` con el nombre asignado, por ejemplo, `ms-inventario`):
-   ```bash
-   npx @nestjs/cli new ms-tu-modulo
-   ```
-   *(Selecciona `npm` cuando te pregunte qué gestor de paquetes usar para mantener la homogeneidad).*
-3. **Modificación Obligatoria del Puerto:**
-   Por defecto, NestJS intenta levantar la aplicación en el puerto `3000`. Para evitar conflictos con los demás servicios corriendo en simultáneo, edita el archivo `src/main.ts` de tu nuevo módulo y asigna el puerto que le corresponde según el archivo de variables de entorno:
-   ```typescript
-   // Ejemplo en microservices/ms-inventario/src/main.ts
-   await app.listen(process.env.PORT || 3002);
-   ```
+### Inicializar un Microservicio
+1. Duplica el archivo `.env.example` y renómbralo a `.env` en la raíz de tu microservicio. Solicita las credenciales de Supabase al administrador.
+2. Navega a la carpeta de tu servicio asignado: `cd microservices/sales-service`
+3. Instala las dependencias: `npm install`
+4. Levanta el servidor en modo desarrollo: `npm run start:dev`
 
 ---
 
-## ▶️ 4. Cómo ejecutar los proyectos en local
+## 🔒 2. Reglas de Arquitectura Obligatorias
 
-Abre una terminal independiente para cada servicio que requieras inicializar en tu entorno local.
+Todo código subido a este repositorio debe cumplir los siguientes criterios de evaluación:
 
-### 🟢 Backend (NestJS)
-Navega a la carpeta del microservicio específico y arrácalo en modo de desarrollo con recarga automática (*watch mode*):
-```bash
-cd microservices/ms-ventas
-npm run start:dev
-```
-
-### 🔵 Frontend Web (Next.js)
-Navega a la carpeta de la interfaz administrativa y levanta el servidor de desarrollo:
-```bash
-cd apps/web-admin
-npm run dev
-```
-La aplicación estará disponible para interactuar en `http://localhost:3000`.
-
-### 📱 Frontend POS (Flutter)
-Navega a la carpeta del Punto de Venta y compila/ejecuta la aplicación:
-```bash
-cd apps/pos-app
-flutter run
-```
+1. **Protección JWT:** Todos los controladores (excepto el login en `auth-service`) deben estar protegidos por un `JwtAuthGuard`. Se debe validar el rol del usuario (Ej: Cajero, Administrador).
+2. **Comunicación Híbrida:** * Usa peticiones HTTP (REST) **solo para consultar información** a otros servicios.
+   * Usa RabbitMQ (Eventos) **para modificar datos** en otros servicios (Ej: Emitir `SaleCompleted` para que Inventario descuente el stock).
+3. **Aislamiento de BD:** Cada microservicio debe apuntar en su conexión única y exclusivamente a su esquema en Supabase (Ej: `sales_db`, `inventory_db`).
 
 ---
 
-## 🌿 5. Reglas de Git (Flujo de Trabajo)
+## 🧪 3. Checklist de Pruebas QA (Flujo de Demostración Final)
 
-Para asegurar la estabilidad del proyecto y facilitar las tareas de integración y QA:
-1. **NUNCA** realices commits directos sobre la rama `main`.
-2. Crea ramas de trabajo descriptivas y estructuradas según su propósito:
-    * `feat/nombre-feature` (ej: `feat/cobro-qr-ventas`)
-    * `fix/nombre-bug` (ej: `fix/calculo-costo-compras`)
-3. Aplica el estándar de **Conventional Commits**: `feat: añade endpoint para registrar venta`.
-4. Abre un **Pull Request (PR)** hacia la rama `main` y solicita la revisión de tus compañeros antes de realizar el merge.
+El equipo de QA debe asegurar que el sistema pueda completar este flujo de 10 pasos exactos mediante Swagger o Postman:
+
+- [ ] **Paso 1:** Crear una compañía ("SuperMarket Bolivia").
+- [ ] **Paso 2:** Crear dos sucursales (Norte y Central).
+- [ ] **Paso 3:** Registrar productos (Arroz, Leche, Aceite).
+- [ ] **Paso 4:** Importar inventario base desde un archivo Excel (`POST /inventory/load_Excel`).
+- [ ] **Paso 5:** Consultar existencias.
+- [ ] **Paso 6:** Registrar un cliente en el sistema de fidelización.
+- [ ] **Paso 7:** Realizar una venta verificando existencia, descuento de stock, generación de comprobante, asignación de puntos y envío de notificación asíncrona.
+- [ ] **Paso 8:** Registrar una baja de inventario por vencimiento/pérdida.
+- [ ] **Paso 9:** Transferir stock de un producto entre dos sucursales.
+- [ ] **Paso 10:** Consultar el saldo final y el Kardex del inventario por sucursal.
+
+---
+
+## 🌿 4. Convenciones de Git
+* No hacer commits directos a `main`.
+* Usa ramas descriptivas: `feat/sales-endpoint`, `fix/jwt-validation`.
+* Revisa el código con al menos un compañero (Pull Request) antes de fusionarlo.
