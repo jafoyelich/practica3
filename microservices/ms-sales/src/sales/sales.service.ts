@@ -1,4 +1,12 @@
-import { Injectable, HttpException, HttpStatus, Inject, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Logger,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ClientProxy } from '@nestjs/microservices';
@@ -31,7 +39,9 @@ export class SalesService {
     const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      this.logger.warn('SUPABASE_URL o SUPABASE_KEY no están definidas en las variables de entorno.');
+      this.logger.warn(
+        'SUPABASE_URL o SUPABASE_KEY no están definidas en las variables de entorno.',
+      );
     }
 
     // Inicializamos el SDK oficial de Supabase apuntando al esquema aislado 'sales_db'
@@ -46,18 +56,27 @@ export class SalesService {
     );
 
     // Inicializamos las URLs de los microservicios externos
-    this.customerServiceUrl = this.configService.get<string>('CUSTOMER_SERVICE_URL') || 'http://localhost:3001';
-    this.productServiceUrl = this.configService.get<string>('PRODUCT_SERVICE_URL') || 'http://localhost:3002';
-    this.inventoryServiceUrl = this.configService.get<string>('INVENTORY_SERVICE_URL') || 'http://localhost:3003';
+    this.customerServiceUrl =
+      this.configService.get<string>('CUSTOMER_SERVICE_URL') ||
+      'http://localhost:3001';
+    this.productServiceUrl =
+      this.configService.get<string>('PRODUCT_SERVICE_URL') ||
+      'http://localhost:3002';
+    this.inventoryServiceUrl =
+      this.configService.get<string>('INVENTORY_SERVICE_URL') ||
+      'http://localhost:3003';
   }
 
   /**
    * Valida la existencia y estado activo de un cliente mediante petición REST HTTP real.
    */
-  private async validateCustomer(id_cliente: string, token: string): Promise<void> {
+  private async validateCustomer(
+    id_cliente: string,
+    token: string,
+  ): Promise<void> {
     const url = `${this.customerServiceUrl}/customers/${id_cliente}`;
     this.logger.log(`Validando cliente en: ${url}`);
-    
+
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
@@ -66,14 +85,23 @@ export class SalesService {
       );
 
       if (!response.data) {
-        throw new BadRequestException(`El cliente con ID ${id_cliente} no existe.`);
+        throw new BadRequestException(
+          `El cliente con ID ${id_cliente} no existe.`,
+        );
       }
-      
-      if (response.data.activo === false || response.data.estado === 'INACTIVO') {
-        throw new BadRequestException(`El cliente con ID ${id_cliente} está inactivo.`);
+
+      if (
+        response.data.activo === false ||
+        response.data.estado === 'INACTIVO'
+      ) {
+        throw new BadRequestException(
+          `El cliente con ID ${id_cliente} está inactivo.`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Error al validar cliente ${id_cliente}: ${error.message}`);
+      this.logger.error(
+        `Error al validar cliente ${id_cliente}: ${error.message}`,
+      );
       throw new BadRequestException(
         `No se pudo validar el cliente. Detalles: ${error.response?.data?.message || error.message}`,
       );
@@ -83,7 +111,10 @@ export class SalesService {
   /**
    * Obtiene el precio real de un producto mediante petición REST HTTP real.
    */
-  private async getProductPrice(id_producto: string, token: string): Promise<number> {
+  private async getProductPrice(
+    id_producto: string,
+    token: string,
+  ): Promise<number> {
     const url = `${this.productServiceUrl}/products/${id_producto}`;
     this.logger.log(`Obteniendo precio de producto en: ${url}`);
 
@@ -95,17 +126,23 @@ export class SalesService {
       );
 
       if (!response.data) {
-        throw new BadRequestException(`El producto con ID ${id_producto} no existe.`);
+        throw new BadRequestException(
+          `El producto con ID ${id_producto} no existe.`,
+        );
       }
 
       const precio = response.data.precio_unitario ?? response.data.precio;
       if (precio === undefined || precio === null) {
-        throw new InternalServerErrorException(`El precio del producto con ID ${id_producto} no fue devuelto.`);
+        throw new InternalServerErrorException(
+          `El precio del producto con ID ${id_producto} no fue devuelto.`,
+        );
       }
 
       return Number(precio);
     } catch (error) {
-      this.logger.error(`Error al obtener producto ${id_producto}: ${error.message}`);
+      this.logger.error(
+        `Error al obtener producto ${id_producto}: ${error.message}`,
+      );
       throw new BadRequestException(
         `No se pudo obtener el precio del producto. Detalles: ${error.response?.data?.message || error.message}`,
       );
@@ -115,7 +152,11 @@ export class SalesService {
   /**
    * Valida existencias del producto mediante petición REST HTTP real.
    */
-  private async validateProductStock(id_producto: string, cantidadRequerida: number, token: string): Promise<void> {
+  private async validateProductStock(
+    id_producto: string,
+    cantidadRequerida: number,
+    token: string,
+  ): Promise<void> {
     const url = `${this.inventoryServiceUrl}/inventory/${id_producto}/stock`;
     this.logger.log(`Verificando stock de producto en: ${url}`);
 
@@ -127,12 +168,16 @@ export class SalesService {
       );
 
       if (!response.data) {
-        throw new BadRequestException(`El producto con ID ${id_producto} no tiene registro en inventario.`);
+        throw new BadRequestException(
+          `El producto con ID ${id_producto} no tiene registro en inventario.`,
+        );
       }
 
       const stockDisponible = response.data.stock ?? response.data.cantidad;
       if (stockDisponible === undefined || stockDisponible === null) {
-        throw new InternalServerErrorException(`El stock del producto con ID ${id_producto} no pudo ser determinado.`);
+        throw new InternalServerErrorException(
+          `El stock del producto con ID ${id_producto} no pudo ser determinado.`,
+        );
       }
 
       if (Number(stockDisponible) < cantidadRequerida) {
@@ -141,7 +186,9 @@ export class SalesService {
         );
       }
     } catch (error) {
-      this.logger.error(`Error al validar stock de producto ${id_producto}: ${error.message}`);
+      this.logger.error(
+        `Error al validar stock de producto ${id_producto}: ${error.message}`,
+      );
       throw new BadRequestException(
         `Error al validar existencias del producto. Detalles: ${error.response?.data?.message || error.message}`,
       );
@@ -156,15 +203,24 @@ export class SalesService {
     const detallesCalculados: CalculatedDetail[] = [];
 
     try {
-      this.logger.log(`Iniciando creación de venta para cliente: ${createSaleDto.id_cliente}`);
+      this.logger.log(
+        `Iniciando creación de venta para cliente: ${createSaleDto.id_cliente}`,
+      );
 
       // Paso 1: Validar cliente vía HTTP
       await this.validateCustomer(createSaleDto.id_cliente, token);
 
       // Paso 2: Validar productos y stock de cada detalle vía HTTP
       for (const detalle of createSaleDto.detalles) {
-        const precioUnitario = await this.getProductPrice(detalle.id_producto, token);
-        await this.validateProductStock(detalle.id_producto, detalle.cantidad, token);
+        const precioUnitario = await this.getProductPrice(
+          detalle.id_producto,
+          token,
+        );
+        await this.validateProductStock(
+          detalle.id_producto,
+          detalle.cantidad,
+          token,
+        );
 
         const subtotalDetalle = precioUnitario * detalle.cantidad;
         subtotalAcumulado += subtotalDetalle;
@@ -215,28 +271,42 @@ export class SalesService {
         .insert(detallesInsert);
 
       if (detallesError) {
-        this.logger.warn(`Ejecutando rollback manual de la cabecera id_venta: ${idVenta}`);
-        await this.supabaseClient.from('ventas').delete().eq('id_venta', idVenta);
-        
+        this.logger.warn(
+          `Ejecutando rollback manual de la cabecera id_venta: ${idVenta}`,
+        );
+        await this.supabaseClient
+          .from('ventas')
+          .delete()
+          .eq('id_venta', idVenta);
+
         throw new InternalServerErrorException(
           `Fallo al registrar los detalles de la venta en base de datos: ${detallesError.message}`,
         );
       }
 
       // 4.3. Insertar en tabla 'comprobantes'
-      const { data: comprobanteDB, error: comprobanteError } = await this.supabaseClient
-        .from('comprobantes')
-        .insert({
-          id_venta: idVenta,
-          fecha_emision: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      const { data: comprobanteDB, error: comprobanteError } =
+        await this.supabaseClient
+          .from('comprobantes')
+          .insert({
+            id_venta: idVenta,
+            fecha_emision: new Date().toISOString(),
+          })
+          .select()
+          .single();
 
       if (comprobanteError) {
-        this.logger.warn(`Ejecutando rollback manual completo para id_venta: ${idVenta}`);
-        await this.supabaseClient.from('detalle_venta').delete().eq('id_venta', idVenta);
-        await this.supabaseClient.from('ventas').delete().eq('id_venta', idVenta);
+        this.logger.warn(
+          `Ejecutando rollback manual completo para id_venta: ${idVenta}`,
+        );
+        await this.supabaseClient
+          .from('detalle_venta')
+          .delete()
+          .eq('id_venta', idVenta);
+        await this.supabaseClient
+          .from('ventas')
+          .delete()
+          .eq('id_venta', idVenta);
 
         throw new InternalServerErrorException(
           `Fallo al emitir el comprobante de la venta en base de datos: ${comprobanteError.message}`,
@@ -251,14 +321,15 @@ export class SalesService {
 
       // Paso 5: Emitir a RabbitMQ 'SaleCompleted' y retornar 201
       this.rabbitClient.emit('SaleCompleted', completeSalePayload);
-      this.logger.log(`Venta creada con éxito y evento 'SaleCompleted' emitido.`);
+      this.logger.log(
+        `Venta creada con éxito y evento 'SaleCompleted' emitido.`,
+      );
 
       return {
         statusCode: HttpStatus.CREATED,
         message: 'Venta registrada y comprobante emitido exitosamente.',
         data: completeSalePayload,
       };
-
     } catch (error) {
       this.logger.error(`Fallo crítico al procesar la venta: ${error.message}`);
 
@@ -274,7 +345,9 @@ export class SalesService {
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new InternalServerErrorException(`No se pudo procesar la venta. Razón: ${error.message}`);
+      throw new InternalServerErrorException(
+        `No se pudo procesar la venta. Razón: ${error.message}`,
+      );
     }
   }
 
@@ -289,7 +362,9 @@ export class SalesService {
       .order('fecha', { ascending: false });
 
     if (error) {
-      throw new InternalServerErrorException(`Error al obtener ventas: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Error al obtener ventas: ${error.message}`,
+      );
     }
     return data;
   }
@@ -299,22 +374,29 @@ export class SalesService {
    */
   async findSaleById(id: string) {
     this.logger.log(`Consultando detalles de venta por ID: ${id}`);
-    
+
     const { data, error } = await this.supabaseClient
       .from('ventas')
-      .select(`
+      .select(
+        `
         *,
         detalle_venta (*),
         comprobantes (*)
-      `)
+      `,
+      )
       .eq('id_venta', id)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        throw new HttpException(`La venta con ID ${id} no existe.`, HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          `La venta con ID ${id} no existe.`,
+          HttpStatus.NOT_FOUND,
+        );
       }
-      throw new InternalServerErrorException(`Error al buscar la venta: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Error al buscar la venta: ${error.message}`,
+      );
     }
 
     return data;
