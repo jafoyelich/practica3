@@ -2,23 +2,27 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-export type NotificationTipoMedio = 'EMAIL' | 'WHATSAPP';
+export type NotificationTipoMedio = 'EMAIL' | 'WHATSAPP' | 'SMS';
 
 @Injectable()
 export class NotificationRepository {
   private readonly logger = new Logger(NotificationRepository.name);
-  private readonly supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient<any, any, any>;
 
   constructor(private readonly configService: ConfigService) {
-    const url = configService.get<string>('SUPABASE_URL');
-    const anonKey = configService.get<string>('SUPABASE_ANON_KEY');
+    const url = this.configService.get<string>('SUPABASE_URL');
+    const anonKey = this.configService.get<string>('SUPABASE_KEY') || this.configService.get<string>('SUPABASE_ANON_KEY');
 
     if (!url || !anonKey) {
-      // Se lanza para fallar rápido, pero el consumer debe manejar errores.
-      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+      throw new Error('Faltan las variables de entorno SUPABASE_URL o SUPABASE_KEY en ms-notification');
     }
 
-    this.supabase = createClient(url, anonKey);
+    // Conexión exclusiva al esquema aislado 'notification_db'
+    this.supabase = createClient(url, anonKey, {
+      db: {
+        schema: 'notification_db',
+      },
+    });
   }
 
   async insertRegistro(params: {
@@ -28,7 +32,7 @@ export class NotificationRepository {
     contenido: string;
     fecha_envio: Date;
   }): Promise<void> {
-    const { data, error } = await this.supabase
+    const { error } = await this.supabase
       .from('registros_notificacion')
       .insert({
         id_notificacion: params.id_notificacion,
@@ -39,14 +43,23 @@ export class NotificationRepository {
       });
 
     if (error) {
-      this.logger.error(`insertRegistro failed: ${error.message}`);
+      this.logger.error(`Error al insertar registro de notificación: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getHistory(id_cliente: string) {
+    const { data, error } = await this.supabase
+      .from('registros_notificacion')
+      .select('*')
+      .eq('id_cliente', id_cliente)
+      .order('fecha_envio', { ascending: false });
+
+    if (error) {
+      this.logger.error(`Error al consultar historial de notificaciones: ${error.message}`);
       throw error;
     }
 
-    if (!data) {
-      // insert sin data en supabase no suele pasar, pero lo dejamos controlado.
-      this.logger.warn('insertRegistro returned empty data');
-    }
+    return data;
   }
 }
-

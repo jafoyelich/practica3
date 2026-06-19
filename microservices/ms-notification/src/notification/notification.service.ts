@@ -17,9 +17,52 @@ export class NotificationService {
     private readonly notificationRepository: NotificationRepository,
   ) {}
 
-  async processSaleCreated(event: SaleCreatedDto): Promise<void> {
-    // Nunca lanzar excepción hacia RabbitMQ (según requerimiento).
+  /**
+   * Procesa la notificación al recibir el evento asíncrono 'SaleCompleted' de RabbitMQ.
+   */
+  async processSaleCompleted(event: any): Promise<void> {
+    const { id_venta, id_cliente, total } = event;
+    if (!id_cliente || !id_venta) {
+      this.logger.warn(`Evento SaleCompleted recibido con payload incompleto en ms-notification: ${JSON.stringify(event)}`);
+      return;
+    }
 
+    this.logger.log(`Procesando notificación para venta completada. Venta ID: ${id_venta}, Cliente ID: ${id_cliente}, Total: ${total}`);
+
+    const id_notificacion = uuidv4();
+    const contenido = `Estimado cliente, su compra por un total de Bs. ${total} ha sido registrada con éxito. Nro de Referencia: ${id_venta}.`;
+
+    // 1. Simulación de notificación mediante Logger nativo
+    this.logger.log(`[NOTIFICACIÓN ENVIADA - SIMULACIÓN] Medio: EMAIL y WHATSAPP. Receptor Cliente ID: ${id_cliente}`);
+    this.logger.log(`[CONTENIDO DE NOTIFICACIÓN]: "${contenido}"`);
+
+    // 2. Persistencia en la Base de Datos (notification_db)
+    try {
+      await this.notificationRepository.insertRegistro({
+        id_notificacion,
+        id_cliente,
+        tipo_medio: 'EMAIL',
+        contenido,
+        fecha_envio: new Date(),
+      });
+      this.logger.log(`Notificación guardada en el historial de base de datos para cliente ${id_cliente}`);
+    } catch (error: any) {
+      this.logger.error(`Fallo al registrar historial de notificación en base de datos: ${error.message}`);
+    }
+  }
+
+  /**
+   * Consulta el historial de notificaciones enviadas a un cliente.
+   */
+  async getNotificationHistory(id_cliente: string) {
+    this.logger.log(`Obteniendo historial de notificaciones para cliente: ${id_cliente}`);
+    return await this.notificationRepository.getHistory(id_cliente);
+  }
+
+  /**
+   * Método heredado para procesar sale.created.
+   */
+  async processSaleCreated(event: SaleCreatedDto): Promise<void> {
     const tasks: Promise<void>[] = [];
 
     // EMAIL
@@ -110,4 +153,3 @@ export class NotificationService {
     await Promise.allSettled(tasks);
   }
 }
-

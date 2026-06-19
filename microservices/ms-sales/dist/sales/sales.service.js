@@ -43,9 +43,15 @@ let SalesService = SalesService_1 = class SalesService {
                 schema: 'sales_db',
             },
         });
-        this.customerServiceUrl = this.configService.get('CUSTOMER_SERVICE_URL') || 'http://localhost:3001';
-        this.productServiceUrl = this.configService.get('PRODUCT_SERVICE_URL') || 'http://localhost:3002';
-        this.inventoryServiceUrl = this.configService.get('INVENTORY_SERVICE_URL') || 'http://localhost:3003';
+        this.customerServiceUrl =
+            this.configService.get('CUSTOMER_SERVICE_URL') ||
+                'http://localhost:3001';
+        this.productServiceUrl =
+            this.configService.get('PRODUCT_SERVICE_URL') ||
+                'http://localhost:3002';
+        this.inventoryServiceUrl =
+            this.configService.get('INVENTORY_SERVICE_URL') ||
+                'http://localhost:3003';
     }
     async validateCustomer(id_cliente, token) {
         const url = `${this.customerServiceUrl}/customers/${id_cliente}`;
@@ -57,7 +63,8 @@ let SalesService = SalesService_1 = class SalesService {
             if (!response.data) {
                 throw new common_1.BadRequestException(`El cliente con ID ${id_cliente} no existe.`);
             }
-            if (response.data.activo === false || response.data.estado === 'INACTIVO') {
+            if (response.data.activo === false ||
+                response.data.estado === 'INACTIVO') {
                 throw new common_1.BadRequestException(`El cliente con ID ${id_cliente} está inactivo.`);
             }
         }
@@ -156,7 +163,10 @@ let SalesService = SalesService_1 = class SalesService {
                 .insert(detallesInsert);
             if (detallesError) {
                 this.logger.warn(`Ejecutando rollback manual de la cabecera id_venta: ${idVenta}`);
-                await this.supabaseClient.from('ventas').delete().eq('id_venta', idVenta);
+                await this.supabaseClient
+                    .from('ventas')
+                    .delete()
+                    .eq('id_venta', idVenta);
                 throw new common_1.InternalServerErrorException(`Fallo al registrar los detalles de la venta en base de datos: ${detallesError.message}`);
             }
             const { data: comprobanteDB, error: comprobanteError } = await this.supabaseClient
@@ -169,8 +179,14 @@ let SalesService = SalesService_1 = class SalesService {
                 .single();
             if (comprobanteError) {
                 this.logger.warn(`Ejecutando rollback manual completo para id_venta: ${idVenta}`);
-                await this.supabaseClient.from('detalle_venta').delete().eq('id_venta', idVenta);
-                await this.supabaseClient.from('ventas').delete().eq('id_venta', idVenta);
+                await this.supabaseClient
+                    .from('detalle_venta')
+                    .delete()
+                    .eq('id_venta', idVenta);
+                await this.supabaseClient
+                    .from('ventas')
+                    .delete()
+                    .eq('id_venta', idVenta);
                 throw new common_1.InternalServerErrorException(`Fallo al emitir el comprobante de la venta en base de datos: ${comprobanteError.message}`);
             }
             const completeSalePayload = {

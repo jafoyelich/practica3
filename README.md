@@ -46,19 +46,32 @@ erp-supermercado/
 * Docker Desktop (Activo en segundo plano)
 * Flutter SDK (Para el desarrollo del POS)
 
-### Levantar Infraestructura Base
-Para que los microservicios puedan comunicarse mediante eventos asíncronos, necesitamos levantar RabbitMQ localmente.
+### Arranque Simplificado y Unificado (Recomendado)
+Para facilitar el desarrollo local, hemos configurado un sistema de inicio unificado desde el directorio raíz utilizando `concurrently`.
 
-```bash
-docker-compose up -d
-```
-* **Panel RabbitMQ:** `http://localhost:15672` (Usuario: `admin` | Pass: `superadmin123`)
+1. Asegúrate de tener las dependencias de la raíz instaladas:
+   ```bash
+   npm install
+   ```
+2. Asegúrate de tener las variables `.env` y las dependencias configuradas en cada microservicio y el frontend.
+3. Levanta **toda la infraestructura (Docker), el API Gateway, todos los microservicios y el frontend** con un solo comando:
+   ```bash
+   npm run dev:all
+   ```
 
-### Inicializar un Microservicio
-1. Duplica el archivo `.env.example` y renómbralo a `.env` en la raíz de tu microservicio. Solicita las credenciales de Supabase al administrador.
-2. Navega a la carpeta de tu servicio asignado: `cd microservices/sales-service`
-3. Instala las dependencias: `npm install`
-4. Levanta el servidor en modo desarrollo: `npm run start:dev`
+### Comandos Individuales y de Contenedores (Desde el Directorio Raíz)
+Si prefieres iniciar componentes específicos o levantar la aplicación completa en Docker, puedes usar:
+* **Levantar Solo Infraestructura (RabbitMQ + Redis):** `npm run infra:up`
+* **Apagar Solo Infraestructura:** `npm run infra:down`
+* **Levantar TODO en Contenedores Docker (Producción):** `npm run docker:up`
+* **Apagar TODO el entorno Docker (Orquestador):** `npm run docker:down`
+* **Iniciar API Gateway (puerto 3000):** `npm run start:gateway`
+* **Iniciar Microservicio Ventas (puerto 3001):** `npm run start:sales`
+* **Iniciar Microservicio Clientes (puerto 3002):** `npm run start:customer`
+* **Iniciar Microservicio Inventario (puerto 3003):** `npm run start:inventory`
+* **Iniciar Microservicio Notificaciones (puerto 3004):** `npm run start:notification`
+* **Iniciar Microservicio Productos (puerto 3005):** `npm run start:product`
+* **Iniciar Frontend Web-Admin (puerto 3000+):** `npm run start:frontend`
 
 ---
 

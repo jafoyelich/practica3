@@ -1,0 +1,23 @@
+{
+  "name": "supermarket-bolivia-erp",
+  "version": "1.0.0",
+  "description": "Espacio de trabajo raíz para el ERP SuperMarket Bolivia S.A.",
+  "private": true,
+  "scripts": {
+    "infra:up": "docker-compose up -d rabbitmq redis",
+    "infra:down": "docker-compose stop rabbitmq redis",
+    "docker:up": "docker-compose up -d --build",
+    "docker:down": "docker-compose down",
+    "start:gateway": "npm --prefix microservices/ms-gateway run start:dev",
+    "start:sales": "npm --prefix microservices/ms-sales run start:dev",
+    "start:customer": "npm --prefix microservices/ms-customer run start:dev",
+    "start:inventory": "npm --prefix microservices/ms-inventory run start:dev",
+    "start:product": "npm --prefix microservices/ms-product run start:dev",
+    "start:notification": "npm --prefix microservices/ms-notification run start:dev",
+    "start:frontend": "npm --prefix apps/web-admin run dev",
+    "dev:all": "npm run infra:up && concurrently -k -p \"[{name}]\" -n \"GATEWAY,SALES,CUSTOMER,INVENTORY,PRODUCT,NOTIFICATION,FRONTEND\" -c \"magenta,cyan,blue,green,yellow,red,white,gray\" \"npm run start:gateway\" \"npm run start:sales\" \"npm run start:customer\" \"npm run start:inventory\" \"npm run start:product\" \"npm run start:notification\" \"npm run start:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

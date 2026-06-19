@@ -13,6 +13,13 @@ services:
       RABBITMQ_DEFAULT_PASS: superadmin123
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp-network
     restart: unless-stopped
 
   # Sistema de Caché
@@ -23,7 +30,137 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - erp-network
     restart: unless-stopped
+
+  # API Gateway (Puerto 3000)
+  api-gateway:
+    build:
+      context: ./microservices/ms-gateway
+      dockerfile: Dockerfile
+    container_name: erp_api_gateway
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./microservices/ms-gateway/.env
+    environment:
+      - PORT=3000
+      - MS_SALES_URL=http://ms-sales:3001
+      - MS_CUSTOMER_URL=http://ms-customer:3002
+      - MS_INVENTORY_URL=http://ms-inventory:3003
+      - MS_NOTIFICATION_URL=http://ms-notification:3004
+      - MS_PRODUCT_URL=http://ms-product:3005
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Ventas (Puerto 3001)
+  ms-sales:
+    build:
+      context: ./microservices/ms-sales
+      dockerfile: Dockerfile
+    container_name: erp_ms_sales
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./microservices/ms-sales/.env
+    environment:
+      - PORT=3001
+      - RABBITMQ_URL=amqp://admin:superadmin123@rabbitmq:5672
+      - CUSTOMER_SERVICE_URL=http://ms-customer:3002
+      - PRODUCT_SERVICE_URL=http://ms-product:3005
+      - INVENTORY_SERVICE_URL=http://ms-inventory:3003
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Clientes (Puerto 3002)
+  ms-customer:
+    build:
+      context: ./microservices/ms-customer
+      dockerfile: Dockerfile
+    container_name: erp_ms_customer
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./microservices/ms-customer/.env
+    environment:
+      - PORT=3002
+      - RABBITMQ_URL=amqp://admin:superadmin123@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Inventario (Puerto 3003)
+  ms-inventory:
+    build:
+      context: ./microservices/ms-inventory
+      dockerfile: Dockerfile
+    container_name: erp_ms_inventory
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./microservices/ms-inventory/.env
+    environment:
+      - PORT=3003
+      - RABBITMQ_URL=amqp://admin:superadmin123@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Notificaciones (Puerto 3004)
+  ms-notification:
+    build:
+      context: ./microservices/ms-notification
+      dockerfile: Dockerfile
+    container_name: erp_ms_notification
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./microservices/ms-notification/.env
+    environment:
+      - PORT=3004
+      - RABBITMQ_URL=amqp://admin:superadmin123@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Productos (Puerto 3005)
+  ms-product:
+    build:
+      context: ./microservices/ms-product
+      dockerfile: Dockerfile
+    container_name: erp_ms_product
+    ports:
+      - "3005:3005"
+    env_file:
+      - ./microservices/ms-product/.env
+    environment:
+      - PORT=3005
+      - RABBITMQ_URL=amqp://admin:superadmin123@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+networks:
+  erp-network:
+    driver: bridge
 
 volumes:
   rabbitmq_data:
