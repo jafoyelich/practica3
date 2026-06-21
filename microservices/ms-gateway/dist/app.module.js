@@ -26,6 +26,7 @@ let AppModule = class AppModule {
         const inventoryUrl = this.configService.get('MS_INVENTORY_URL') || 'http://localhost:3003';
         const notificationUrl = this.configService.get('MS_NOTIFICATION_URL') || 'http://localhost:3004';
         const productUrl = this.configService.get('MS_PRODUCT_URL') || 'http://localhost:3005';
+        const companyUrl = this.configService.get('COMPANY_SERVICE_URL') || 'http://localhost:3006';
         const registerProxy = (prefix, targetUrl) => {
             consumer
                 .apply((0, http_proxy_middleware_1.createProxyMiddleware)({
@@ -51,6 +52,9 @@ let AppModule = class AppModule {
         registerProxy('inventory', inventoryUrl);
         registerProxy('notifications', notificationUrl);
         registerProxy('products', productUrl);
+        registerProxy('companies', companyUrl);
+        registerProxy('cities', companyUrl);
+        registerProxy('branches', companyUrl);
     }
 };
 exports.AppModule = AppModule;

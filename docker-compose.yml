@@ -51,9 +51,11 @@ services:
       - MS_INVENTORY_URL=http://ms-inventory:3003
       - MS_NOTIFICATION_URL=http://ms-notification:3004
       - MS_PRODUCT_URL=http://ms-product:3005
+      - COMPANY_SERVICE_URL=http://ms-company:3006
     networks:
       - erp-network
     restart: unless-stopped
+
 
   # Microservicio Ventas (Puerto 3001)
   ms-sales:
@@ -154,6 +156,22 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  # Microservicio Company/Branches (Puerto 3006)
+  ms-company:
+    build:
+      context: ./microservices/ms-company
+      dockerfile: Dockerfile
+    container_name: erp_ms_company
+    ports:
+      - "3006:3006"
+    env_file:
+      - ./microservices/ms-company/.env
+    environment:
+      - PORT=3006
     networks:
       - erp-network
     restart: unless-stopped

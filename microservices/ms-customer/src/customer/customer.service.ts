@@ -36,8 +36,11 @@ export class CustomerService {
       .from('clientes')
       .insert({
         nombre: dto.nombre,
-        nit_ci: dto.nit_ci,
-        puntos_acumulados: dto.puntos_acumulados ?? 0,
+        ci: dto.ci,
+        email: dto.email,
+        telefono: dto.telefono,
+        estado: dto.estado ?? 'ACTIVO',
+        puntos: dto.puntos ?? 0,
       })
       .select()
       .single();
@@ -74,7 +77,7 @@ export class CustomerService {
     const { data, error } = await this.supabaseClient
       .from('clientes')
       .select('*')
-      .eq('id_cliente', id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -117,13 +120,13 @@ export class CustomerService {
     // Obtener cliente y sus puntos actuales
     const customer = await this.findOne(id);
     const nuevosPuntos =
-      Number(customer.puntos_acumulados || 0) + Number(dto.puntos);
+      Number(customer.puntos || 0) + Number(dto.puntos);
 
     // Actualizar cliente
     const { error: updateError } = await this.supabaseClient
       .from('clientes')
-      .update({ puntos_acumulados: nuevosPuntos })
-      .eq('id_cliente', id);
+      .update({ puntos: nuevosPuntos })
+      .eq('id', id);
 
     if (updateError) {
       this.logger.error(
@@ -141,7 +144,7 @@ export class CustomerService {
         .from('historial_puntos')
         .insert({
           id_cliente: id,
-          puntos_otorgados: dto.puntos,
+          puntos: dto.puntos,
           motivo: dto.motivo,
           fecha: new Date().toISOString(),
         })
@@ -155,8 +158,8 @@ export class CustomerService {
       // Revertir la actualización de puntos (Rollback manual)
       await this.supabaseClient
         .from('clientes')
-        .update({ puntos_acumulados: customer.puntos_acumulados })
-        .eq('id_cliente', id);
+        .update({ puntos: customer.puntos })
+        .eq('id', id);
 
       throw new HttpException(
         `Error al registrar historial: ${historyError.message}`,
@@ -166,7 +169,7 @@ export class CustomerService {
 
     return {
       message: 'Puntos asignados con éxito',
-      cliente: { ...customer, puntos_acumulados: nuevosPuntos },
+      cliente: { ...customer, puntos: nuevosPuntos },
       historial: historialData,
     };
   }

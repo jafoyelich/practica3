@@ -45,10 +45,10 @@ let SalesService = SalesService_1 = class SalesService {
         });
         this.customerServiceUrl =
             this.configService.get('CUSTOMER_SERVICE_URL') ||
-                'http://localhost:3001';
+                'http://localhost:3002';
         this.productServiceUrl =
             this.configService.get('PRODUCT_SERVICE_URL') ||
-                'http://localhost:3002';
+                'http://localhost:3005';
         this.inventoryServiceUrl =
             this.configService.get('INVENTORY_SERVICE_URL') ||
                 'http://localhost:3003';
@@ -94,8 +94,8 @@ let SalesService = SalesService_1 = class SalesService {
             throw new common_1.BadRequestException(`No se pudo obtener el precio del producto. Detalles: ${error.response?.data?.message || error.message}`);
         }
     }
-    async validateProductStock(id_producto, cantidadRequerida, token) {
-        const url = `${this.inventoryServiceUrl}/inventory/${id_producto}/stock`;
+    async validateProductStock(id_producto, cantidadRequerida, id_sucursal, token) {
+        const url = `${this.inventoryServiceUrl}/inventory/${id_producto}/stock?id_sucursal=${id_sucursal}`;
         this.logger.log(`Verificando stock de producto en: ${url}`);
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, {
@@ -125,13 +125,13 @@ let SalesService = SalesService_1 = class SalesService {
             await this.validateCustomer(createSaleDto.id_cliente, token);
             for (const detalle of createSaleDto.detalles) {
                 const precioUnitario = await this.getProductPrice(detalle.id_producto, token);
-                await this.validateProductStock(detalle.id_producto, detalle.cantidad, token);
+                await this.validateProductStock(detalle.id_producto, detalle.cantidad, createSaleDto.id_sucursal, token);
                 const subtotalDetalle = precioUnitario * detalle.cantidad;
                 subtotalAcumulado += subtotalDetalle;
                 detallesCalculados.push({
                     id_producto: detalle.id_producto,
                     cantidad: detalle.cantidad,
-                    precio_unitario_cobrado: precioUnitario,
+                    precio_unitario: precioUnitario,
                     subtotal: subtotalDetalle,
                 });
             }
@@ -141,8 +141,8 @@ let SalesService = SalesService_1 = class SalesService {
                 .insert({
                 id_sucursal: createSaleDto.id_sucursal,
                 id_cliente: createSaleDto.id_cliente,
-                subtotal: subtotalAcumulado,
                 total: total,
+                tipo_pago: createSaleDto.tipo_pago,
                 estado: 'COMPLETADA',
             })
                 .select()
@@ -150,23 +150,23 @@ let SalesService = SalesService_1 = class SalesService {
             if (ventaError) {
                 throw new common_1.InternalServerErrorException(`Fallo al registrar la cabecera de la venta en base de datos: ${ventaError.message}`);
             }
-            const idVenta = ventaDB.id_venta;
+            const idVenta = ventaDB.id;
             const detallesInsert = detallesCalculados.map((item) => ({
                 id_venta: idVenta,
                 id_producto: item.id_producto,
                 cantidad: item.cantidad,
-                precio_unitario_cobrado: item.precio_unitario_cobrado,
+                precio_unitario: item.precio_unitario,
                 subtotal: item.subtotal,
             }));
             const { error: detallesError } = await this.supabaseClient
-                .from('detalle_venta')
+                .from('detalles_venta')
                 .insert(detallesInsert);
             if (detallesError) {
                 this.logger.warn(`Ejecutando rollback manual de la cabecera id_venta: ${idVenta}`);
                 await this.supabaseClient
                     .from('ventas')
                     .delete()
-                    .eq('id_venta', idVenta);
+                    .eq('id', idVenta);
                 throw new common_1.InternalServerErrorException(`Fallo al registrar los detalles de la venta en base de datos: ${detallesError.message}`);
             }
             const { data: comprobanteDB, error: comprobanteError } = await this.supabaseClient
@@ -180,13 +180,13 @@ let SalesService = SalesService_1 = class SalesService {
             if (comprobanteError) {
                 this.logger.warn(`Ejecutando rollback manual completo para id_venta: ${idVenta}`);
                 await this.supabaseClient
-                    .from('detalle_venta')
+                    .from('detalles_venta')
                     .delete()
                     .eq('id_venta', idVenta);
                 await this.supabaseClient
                     .from('ventas')
                     .delete()
-                    .eq('id_venta', idVenta);
+                    .eq('id', idVenta);
                 throw new common_1.InternalServerErrorException(`Fallo al emitir el comprobante de la venta en base de datos: ${comprobanteError.message}`);
             }
             const completeSalePayload = {
@@ -234,10 +234,10 @@ let SalesService = SalesService_1 = class SalesService {
             .from('ventas')
             .select(`
         *,
-        detalle_venta (*),
+        detalles_venta (*),
         comprobantes (*)
       `)
-            .eq('id_venta', id)
+            .eq('id', id)
             .single();
         if (error) {
             if (error.code === 'PGRST116') {

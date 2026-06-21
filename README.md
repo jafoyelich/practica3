@@ -71,6 +71,7 @@ Si prefieres iniciar componentes específicos o levantar la aplicación completa
 * **Iniciar Microservicio Inventario (puerto 3003):** `npm run start:inventory`
 * **Iniciar Microservicio Notificaciones (puerto 3004):** `npm run start:notification`
 * **Iniciar Microservicio Productos (puerto 3005):** `npm run start:product`
+* **Iniciar Microservicio Compañías (puerto 3006):** `npm run start:company`
 * **Iniciar Frontend Web-Admin (puerto 3000+):** `npm run start:frontend`
 
 ---

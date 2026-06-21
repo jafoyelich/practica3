@@ -17,7 +17,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 interface CalculatedDetail {
   id_producto: string;
   cantidad: number;
-  precio_unitario_cobrado: number;
+  precio_unitario: number;
   subtotal: number;
 }
 
@@ -58,10 +58,10 @@ export class SalesService {
     // Inicializamos las URLs de los microservicios externos
     this.customerServiceUrl =
       this.configService.get<string>('CUSTOMER_SERVICE_URL') ||
-      'http://localhost:3001';
+      'http://localhost:3002';
     this.productServiceUrl =
       this.configService.get<string>('PRODUCT_SERVICE_URL') ||
-      'http://localhost:3002';
+      'http://localhost:3005';
     this.inventoryServiceUrl =
       this.configService.get<string>('INVENTORY_SERVICE_URL') ||
       'http://localhost:3003';
@@ -155,9 +155,10 @@ export class SalesService {
   private async validateProductStock(
     id_producto: string,
     cantidadRequerida: number,
+    id_sucursal: string,
     token: string,
   ): Promise<void> {
-    const url = `${this.inventoryServiceUrl}/inventory/${id_producto}/stock`;
+    const url = `${this.inventoryServiceUrl}/inventory/${id_producto}/stock?id_sucursal=${id_sucursal}`;
     this.logger.log(`Verificando stock de producto en: ${url}`);
 
     try {
@@ -219,6 +220,7 @@ export class SalesService {
         await this.validateProductStock(
           detalle.id_producto,
           detalle.cantidad,
+          createSaleDto.id_sucursal,
           token,
         );
 
@@ -228,7 +230,7 @@ export class SalesService {
         detallesCalculados.push({
           id_producto: detalle.id_producto,
           cantidad: detalle.cantidad,
-          precio_unitario_cobrado: precioUnitario,
+          precio_unitario: precioUnitario,
           subtotal: subtotalDetalle,
         });
       }
@@ -242,8 +244,8 @@ export class SalesService {
         .insert({
           id_sucursal: createSaleDto.id_sucursal,
           id_cliente: createSaleDto.id_cliente,
-          subtotal: subtotalAcumulado,
           total: total,
+          tipo_pago: createSaleDto.tipo_pago,
           estado: 'COMPLETADA',
         })
         .select()
@@ -255,19 +257,19 @@ export class SalesService {
         );
       }
 
-      const idVenta = ventaDB.id_venta;
+      const idVenta = ventaDB.id;
 
-      // 4.2. Insertar en tabla 'detalle_venta'
+      // 4.2. Insertar en tabla 'detalles_venta'
       const detallesInsert = detallesCalculados.map((item) => ({
         id_venta: idVenta,
         id_producto: item.id_producto,
         cantidad: item.cantidad,
-        precio_unitario_cobrado: item.precio_unitario_cobrado,
+        precio_unitario: item.precio_unitario,
         subtotal: item.subtotal,
       }));
 
       const { error: detallesError } = await this.supabaseClient
-        .from('detalle_venta')
+        .from('detalles_venta')
         .insert(detallesInsert);
 
       if (detallesError) {
@@ -277,7 +279,7 @@ export class SalesService {
         await this.supabaseClient
           .from('ventas')
           .delete()
-          .eq('id_venta', idVenta);
+          .eq('id', idVenta);
 
         throw new InternalServerErrorException(
           `Fallo al registrar los detalles de la venta en base de datos: ${detallesError.message}`,
@@ -300,13 +302,13 @@ export class SalesService {
           `Ejecutando rollback manual completo para id_venta: ${idVenta}`,
         );
         await this.supabaseClient
-          .from('detalle_venta')
+          .from('detalles_venta')
           .delete()
           .eq('id_venta', idVenta);
         await this.supabaseClient
           .from('ventas')
           .delete()
-          .eq('id_venta', idVenta);
+          .eq('id', idVenta);
 
         throw new InternalServerErrorException(
           `Fallo al emitir el comprobante de la venta en base de datos: ${comprobanteError.message}`,
@@ -380,11 +382,11 @@ export class SalesService {
       .select(
         `
         *,
-        detalle_venta (*),
+        detalles_venta (*),
         comprobantes (*)
       `,
       )
-      .eq('id_venta', id)
+      .eq('id', id)
       .single();
 
     if (error) {

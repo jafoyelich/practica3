@@ -39,11 +39,12 @@ export class NotificationService {
     // 2. Persistencia en la Base de Datos (notification_db)
     try {
       await this.notificationRepository.insertRegistro({
-        id_notificacion,
+        id_venta,
         id_cliente,
-        tipo_medio: 'EMAIL',
-        contenido,
-        fecha_envio: new Date(),
+        tipo: 'EMAIL',
+        destinatario: 'SIMULADO',
+        mensaje: contenido,
+        estado: 'SENT',
       });
       this.logger.log(`Notificación guardada en el historial de base de datos para cliente ${id_cliente}`);
     } catch (error: any) {
@@ -87,22 +88,24 @@ export class NotificationService {
           });
 
           await this.notificationRepository.insertRegistro({
-            id_notificacion,
+            id_venta: event.id_venta,
             id_cliente: event.id_cliente,
-            tipo_medio: 'EMAIL',
-            contenido: 'OK',
-            fecha_envio: new Date(),
+            tipo: 'EMAIL',
+            destinatario: event.cliente_email || 'desconocido',
+            mensaje: `Confirmación de venta emitida exitosamente a ${event.cliente_email}`,
+            estado: 'SUCCESS',
           });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
           this.logger.error(`Email failed: ${message}`);
           try {
             await this.notificationRepository.insertRegistro({
-              id_notificacion,
+              id_venta: event.id_venta,
               id_cliente: event.id_cliente,
-              tipo_medio: 'EMAIL',
-              contenido: `ERROR: ${message}`,
-              fecha_envio: new Date(),
+              tipo: 'EMAIL',
+              destinatario: event.cliente_email || 'desconocido',
+              mensaje: `Error al enviar email: ${message}`,
+              estado: 'ERROR',
             });
           } catch (dbErr: unknown) {
             const dbMessage = dbErr instanceof Error ? dbErr.message : String(dbErr);
@@ -125,22 +128,24 @@ export class NotificationService {
           });
 
           await this.notificationRepository.insertRegistro({
-            id_notificacion,
+            id_venta: event.id_venta,
             id_cliente: event.id_cliente,
-            tipo_medio: 'WHATSAPP',
-            contenido: 'OK',
-            fecha_envio: new Date(),
+            tipo: 'WHATSAPP',
+            destinatario: event.cliente_telefono || 'desconocido',
+            mensaje: `Confirmación de venta emitida exitosamente a WhatsApp ${event.cliente_telefono}`,
+            estado: 'SUCCESS',
           });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
           this.logger.error(`WhatsApp failed: ${message}`);
           try {
             await this.notificationRepository.insertRegistro({
-              id_notificacion,
+              id_venta: event.id_venta,
               id_cliente: event.id_cliente,
-              tipo_medio: 'WHATSAPP',
-              contenido: `ERROR: ${message}`,
-              fecha_envio: new Date(),
+              tipo: 'WHATSAPP',
+              destinatario: event.cliente_telefono || 'desconocido',
+              mensaje: `Error al enviar WhatsApp: ${message}`,
+              estado: 'ERROR',
             });
           } catch (dbErr: unknown) {
             const dbMessage = dbErr instanceof Error ? dbErr.message : String(dbErr);

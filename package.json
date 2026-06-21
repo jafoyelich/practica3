@@ -14,8 +14,10 @@
     "start:inventory": "npm --prefix microservices/ms-inventory run start:dev",
     "start:product": "npm --prefix microservices/ms-product run start:dev",
     "start:notification": "npm --prefix microservices/ms-notification run start:dev",
+    "start:company": "npm --prefix microservices/ms-company run start:dev",
     "start:frontend": "npm --prefix apps/web-admin run dev",
-    "dev:all": "npm run infra:up && concurrently -k -p \"[{name}]\" -n \"GATEWAY,SALES,CUSTOMER,INVENTORY,PRODUCT,NOTIFICATION,FRONTEND\" -c \"magenta,cyan,blue,green,yellow,red,white,gray\" \"npm run start:gateway\" \"npm run start:sales\" \"npm run start:customer\" \"npm run start:inventory\" \"npm run start:product\" \"npm run start:notification\" \"npm run start:frontend\""
+    "dev:all": "npm run infra:up && concurrently -k -p \"[{name}]\" -n \"GATEWAY,SALES,CUSTOMER,INVENTORY,PRODUCT,NOTIFICATION,COMPANY,FRONTEND\" -c \"magenta,cyan,blue,green,yellow,red,gray,white\" \"npm run start:gateway\" \"npm run start:sales\" \"npm run start:customer\" \"npm run start:inventory\" \"npm run start:product\" \"npm run start:notification\" \"npm run start:company\" \"npm run start:frontend\""
+
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

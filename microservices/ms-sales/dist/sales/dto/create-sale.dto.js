@@ -37,11 +37,21 @@ __decorate([
     __metadata("design:type", Number)
 ], SaleDetailDto.prototype, "cantidad", void 0);
 class CreateSaleDto {
+    tipo_pago;
     id_sucursal;
     id_cliente;
     detalles;
 }
 exports.CreateSaleDto = CreateSaleDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Método o tipo de pago empleado (e.g. EFECTIVO, QR, TARJETA)',
+        example: 'EFECTIVO',
+    }),
+    (0, class_validator_1.IsString)({ message: 'El tipo_pago debe ser un texto.' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'El tipo_pago es obligatorio.' }),
+    __metadata("design:type", String)
+], CreateSaleDto.prototype, "tipo_pago", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'UUID v4 de la sucursal donde se realiza la venta',

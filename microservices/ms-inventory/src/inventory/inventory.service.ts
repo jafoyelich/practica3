@@ -118,8 +118,7 @@ export class InventoryService {
             id_producto: row.id_producto,
             tipo_movimiento: 'INGRESO',
             cantidad: cantidad,
-            saldo_resultante: nuevoSaldo,
-            referencia: 'Carga inicial por archivo Excel',
+            motivo: 'Carga inicial por archivo Excel',
           });
 
         if (kardexError) {
@@ -208,8 +207,7 @@ export class InventoryService {
         id_producto: dto.id_producto,
         tipo_movimiento: 'EGRESO',
         cantidad: dto.cantidad,
-        saldo_resultante: nuevoSaldo,
-        referencia: `Merma: ${dto.motivo}`,
+        motivo: `Merma: ${dto.motivo}`,
       })
       .select()
       .single();
@@ -318,8 +316,7 @@ export class InventoryService {
         id_producto: dto.id_producto,
         tipo_movimiento: 'TRANSFERENCIA',
         cantidad: dto.cantidad,
-        saldo_resultante: nuevoSaldoOrigen,
-        referencia: `Transferencia egreso hacia sucursal ${dto.id_sucursal_destino}`,
+        motivo: `Transferencia egreso hacia sucursal ${dto.id_sucursal_destino}`,
       });
 
     if (kardexOrigenErr) {
@@ -334,8 +331,7 @@ export class InventoryService {
         id_producto: dto.id_producto,
         tipo_movimiento: 'TRANSFERENCIA',
         cantidad: dto.cantidad,
-        saldo_resultante: nuevoSaldoDestino,
-        referencia: `Transferencia ingreso desde sucursal ${dto.id_sucursal_origen}`,
+        motivo: `Transferencia ingreso desde sucursal ${dto.id_sucursal_origen}`,
       });
 
     if (kardexDestErr) {
@@ -437,8 +433,7 @@ export class InventoryService {
             id_producto,
             tipo_movimiento: 'VENTA',
             cantidad: Number(cantidad),
-            saldo_resultante: nuevoSaldo,
-            referencia: `Egreso automático por venta completada ID: ${id_venta}`,
+            motivo: `Egreso automático por venta completada ID: ${id_venta}`,
           });
 
         if (kardexError) {

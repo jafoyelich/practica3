@@ -26,20 +26,22 @@ export class NotificationRepository {
   }
 
   async insertRegistro(params: {
-    id_notificacion: string;
+    id_venta: string;
     id_cliente: string;
-    tipo_medio: NotificationTipoMedio;
-    contenido: string;
-    fecha_envio: Date;
+    tipo: NotificationTipoMedio;
+    destinatario: string;
+    mensaje: string;
+    estado: string;
   }): Promise<void> {
     const { error } = await this.supabase
       .from('registros_notificacion')
       .insert({
-        id_notificacion: params.id_notificacion,
+        id_venta: params.id_venta,
         id_cliente: params.id_cliente,
-        tipo_medio: params.tipo_medio,
-        contenido: params.contenido,
-        fecha_envio: params.fecha_envio.toISOString(),
+        tipo: params.tipo,
+        destinatario: params.destinatario,
+        mensaje: params.mensaje,
+        estado: params.estado,
       });
 
     if (error) {
@@ -53,7 +55,7 @@ export class NotificationRepository {
       .from('registros_notificacion')
       .select('*')
       .eq('id_cliente', id_cliente)
-      .order('fecha_envio', { ascending: false });
+      .order('fecha', { ascending: false });
 
     if (error) {
       this.logger.error(`Error al consultar historial de notificaciones: ${error.message}`);

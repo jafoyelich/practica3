@@ -23,6 +23,7 @@ export class AppModule implements NestModule {
     const inventoryUrl = this.configService.get<string>('MS_INVENTORY_URL') || 'http://localhost:3003';
     const notificationUrl = this.configService.get<string>('MS_NOTIFICATION_URL') || 'http://localhost:3004';
     const productUrl = this.configService.get<string>('MS_PRODUCT_URL') || 'http://localhost:3005';
+    const companyUrl = this.configService.get<string>('COMPANY_SERVICE_URL') || 'http://localhost:3006';
 
     // Función auxiliar para registrar proxies con control de errores personalizado
     const registerProxy = (prefix: string, targetUrl: string) => {
@@ -58,5 +59,9 @@ export class AppModule implements NestModule {
     registerProxy('inventory', inventoryUrl);
     registerProxy('notifications', notificationUrl);
     registerProxy('products', productUrl);
+    registerProxy('companies', companyUrl);
+    registerProxy('cities', companyUrl);
+    registerProxy('branches', companyUrl);
   }
 }
+

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsArray, ValidateNested, IsNotEmpty, IsNumber, IsPositive, ArrayNotEmpty } from 'class-validator';
+import { IsUUID, IsArray, ValidateNested, IsNotEmpty, IsNumber, IsPositive, ArrayNotEmpty, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SaleDetailDto {
@@ -21,6 +21,14 @@ export class SaleDetailDto {
 }
 
 export class CreateSaleDto {
+  @ApiProperty({
+    description: 'Método o tipo de pago empleado (e.g. EFECTIVO, QR, TARJETA)',
+    example: 'EFECTIVO',
+  })
+  @IsString({ message: 'El tipo_pago debe ser un texto.' })
+  @IsNotEmpty({ message: 'El tipo_pago es obligatorio.' })
+  tipo_pago: string;
+
   @ApiProperty({
     description: 'UUID v4 de la sucursal donde se realiza la venta',
     example: '5f3a0937-2cfc-4bf0-80d4-1a986c7b3370',

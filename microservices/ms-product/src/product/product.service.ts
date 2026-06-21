@@ -101,7 +101,7 @@ export class ProductService {
         categorias (nombre),
         marcas (nombre)
       `)
-      .eq('id_producto', id)
+      .eq('id', id)
       .maybeSingle();
 
     if (error) {
@@ -139,7 +139,7 @@ export class ProductService {
         precio_base: updateProductDto.precio_base,
         estado: updateProductDto.estado,
       })
-      .eq('id_producto', id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -166,7 +166,7 @@ export class ProductService {
     const { error } = await this.supabaseClient
       .from('productos')
       .delete()
-      .eq('id_producto', id);
+      .eq('id', id);
 
     if (error) {
       this.logger.error(`Error al eliminar producto ${id}: ${error.message}`);
