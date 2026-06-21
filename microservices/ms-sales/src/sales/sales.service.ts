@@ -403,4 +403,50 @@ export class SalesService {
 
     return data;
   }
+
+  /**
+   * Obtiene el reporte de ventas diario agrupado por tipo de pago.
+   */
+  async getDailyReport(date: string) {
+    this.logger.log(`Generando reporte diario para fecha: ${date}`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new BadRequestException('Formato de fecha inválido. Debe ser YYYY-MM-DD.');
+    }
+
+    // Usamos el inicio y fin del día en UTC
+    const start = `${date}T00:00:00.000Z`;
+    const end = `${date}T23:59:59.999Z`;
+
+    const { data, error } = await this.supabaseClient
+      .from('ventas')
+      .select('total, tipo_pago')
+      .gte('fecha', start)
+      .lte('fecha', end);
+
+    if (error) {
+      this.logger.error(`Error al consultar ventas para reporte: ${error.message}`);
+      throw new InternalServerErrorException(`Error al generar reporte: ${error.message}`);
+    }
+
+    const groups: { [key: string]: number } = {};
+    let totalConsolidado = 0;
+
+    if (data) {
+      data.forEach((venta) => {
+        const tipo = venta.tipo_pago || 'DESCONOCIDO';
+        const total = Number(venta.total || 0);
+        groups[tipo] = (groups[tipo] || 0) + total;
+        totalConsolidado += total;
+      });
+    }
+
+    return {
+      fecha: date,
+      total_consolidado: totalConsolidado,
+      ingresos_por_metodo_pago: Object.keys(groups).map((tipo) => ({
+        tipo_pago: tipo,
+        total: groups[tipo],
+      })),
+    };
+  }
 }

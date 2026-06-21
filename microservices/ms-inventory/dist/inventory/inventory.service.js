@@ -41,19 +41,25 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var InventoryService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InventoryService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const microservices_1 = require("@nestjs/microservices");
 const supabase_js_1 = require("@supabase/supabase-js");
 const XLSX = __importStar(require("xlsx"));
 let InventoryService = InventoryService_1 = class InventoryService {
     configService;
+    rabbitClient;
     supabaseClient;
     logger = new common_1.Logger(InventoryService_1.name);
-    constructor(configService) {
+    constructor(configService, rabbitClient) {
         this.configService = configService;
+        this.rabbitClient = rabbitClient;
         const supabaseUrl = this.configService.get('SUPABASE_URL');
         const supabaseKey = this.configService.get('SUPABASE_KEY');
         if (!supabaseUrl || !supabaseKey) {
@@ -135,6 +141,11 @@ let InventoryService = InventoryService_1 = class InventoryService {
                 }
                 results.push(updateResult);
             }
+            this.rabbitClient.emit('InventoryLoaded', {
+                tipo: 'excel',
+                filas_procesadas: rows.length,
+                timestamp: new Date().toISOString(),
+            });
             return {
                 message: 'Carga de inventario finalizada con éxito.',
                 filas_procesadas: rows.length,
@@ -199,6 +210,15 @@ let InventoryService = InventoryService_1 = class InventoryService {
             .single();
         if (kardexError) {
             this.logger.error(`Error al registrar Kardex para merma: ${kardexError.message}`);
+        }
+        if (nuevoSaldo < 10) {
+            this.rabbitClient.emit('StockLow', {
+                id_producto: dto.id_producto,
+                id_sucursal: dto.id_sucursal,
+                saldo: nuevoSaldo,
+                limite: 10,
+                timestamp: new Date().toISOString(),
+            });
         }
         return {
             message: 'Merma registrada con éxito.',
@@ -292,6 +312,22 @@ let InventoryService = InventoryService_1 = class InventoryService {
         if (kardexDestErr) {
             this.logger.error(`Error al registrar Kardex destino: ${kardexDestErr.message}`);
         }
+        this.rabbitClient.emit('TransferCompleted', {
+            id_producto: dto.id_producto,
+            id_sucursal_origen: dto.id_sucursal_origen,
+            id_sucursal_destino: dto.id_sucursal_destino,
+            cantidad: dto.cantidad,
+            timestamp: new Date().toISOString(),
+        });
+        if (nuevoSaldoOrigen < 10) {
+            this.rabbitClient.emit('StockLow', {
+                id_producto: dto.id_producto,
+                id_sucursal: dto.id_sucursal_origen,
+                saldo: nuevoSaldoOrigen,
+                limite: 10,
+                timestamp: new Date().toISOString(),
+            });
+        }
         return {
             message: 'Transferencia realizada con éxito.',
             id_producto: dto.id_producto,
@@ -368,6 +404,15 @@ let InventoryService = InventoryService_1 = class InventoryService {
                 if (kardexError) {
                     this.logger.error(`Error al guardar Kardex de venta ${id_venta}: ${kardexError.message}`);
                 }
+                if (nuevoSaldo < 10) {
+                    this.rabbitClient.emit('StockLow', {
+                        id_producto,
+                        id_sucursal,
+                        saldo: nuevoSaldo,
+                        limite: 10,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
                 this.logger.log(`Descontado stock con éxito: Producto ${id_producto}, Cantidad: ${cantidad}, Saldo restante: ${nuevoSaldo}`);
             }
             catch (error) {
@@ -375,10 +420,97 @@ let InventoryService = InventoryService_1 = class InventoryService {
             }
         }
     }
+    async getConsolidatedStock(id_producto) {
+        this.logger.log(`Consultando stock consolidado para producto: ${id_producto}`);
+        const { data, error } = await this.supabaseClient
+            .from('stock_sucursal')
+            .select('cantidad')
+            .eq('id_producto', id_producto);
+        if (error) {
+            this.logger.error(`Error al consultar stock consolidado: ${error.message}`);
+            throw new common_1.InternalServerErrorException(`Error al obtener stock consolidado: ${error.message}`);
+        }
+        if (!data)
+            return 0;
+        const total = data.reduce((acc, row) => acc + Number(row.cantidad), 0);
+        return total;
+    }
+    async registerInput(dto) {
+        const { id_sucursal, id_producto, cantidad } = dto;
+        if (!id_sucursal || !id_producto || cantidad === undefined || cantidad <= 0) {
+            throw new common_1.BadRequestException('Formato de entrada inválido. Debe contener: id_sucursal, id_producto, cantidad (mayor a 0).');
+        }
+        this.logger.log(`Registrando ingreso manual de inventario para producto ${id_producto} en sucursal ${id_sucursal}`);
+        const { data: currentStock, error: getError } = await this.supabaseClient
+            .from('stock_sucursal')
+            .select('*')
+            .eq('id_sucursal', id_sucursal)
+            .eq('id_producto', id_producto)
+            .maybeSingle();
+        if (getError) {
+            throw new common_1.InternalServerErrorException(`Error al consultar stock actual: ${getError.message}`);
+        }
+        let nuevoSaldo = cantidad;
+        let updateResult;
+        if (currentStock) {
+            nuevoSaldo = Number(currentStock.cantidad) + cantidad;
+            const { data, error: updateError } = await this.supabaseClient
+                .from('stock_sucursal')
+                .update({ cantidad: nuevoSaldo })
+                .eq('id_stock', currentStock.id_stock)
+                .select()
+                .single();
+            if (updateError) {
+                throw new common_1.InternalServerErrorException(`Error al actualizar stock: ${updateError.message}`);
+            }
+            updateResult = data;
+        }
+        else {
+            const { data, error: insertError } = await this.supabaseClient
+                .from('stock_sucursal')
+                .insert({
+                id_sucursal,
+                id_producto,
+                cantidad: nuevoSaldo,
+            })
+                .select()
+                .single();
+            if (insertError) {
+                throw new common_1.InternalServerErrorException(`Error al insertar stock: ${insertError.message}`);
+            }
+            updateResult = data;
+        }
+        const { error: kardexError } = await this.supabaseClient
+            .from('kardex')
+            .insert({
+            id_sucursal,
+            id_producto,
+            tipo_movimiento: 'INGRESO',
+            cantidad: cantidad,
+            motivo: 'Ingreso manual individual',
+        });
+        if (kardexError) {
+            this.logger.error(`Error al registrar Kardex para ingreso manual: ${kardexError.message}`);
+        }
+        this.rabbitClient.emit('InventoryLoaded', {
+            id_sucursal,
+            id_producto,
+            cantidad,
+            tipo: 'manual',
+            nuevo_saldo: nuevoSaldo,
+            timestamp: new Date().toISOString()
+        });
+        return {
+            message: 'Ingreso de inventario registrado con éxito.',
+            data: updateResult
+        };
+    }
 };
 exports.InventoryService = InventoryService;
 exports.InventoryService = InventoryService = InventoryService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __param(1, (0, common_1.Inject)('RABBITMQ_SERVICE')),
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        microservices_1.ClientProxy])
 ], InventoryService);
 //# sourceMappingURL=inventory.service.js.map

@@ -1,98 +1,97 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏢 Company Service (ms-company)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este es el microservicio de administración corporativa (**Company Service**) de la plataforma distribuida de supermercados **"OXXO Bolivia"**. Está construido utilizando **NestJS**, **TypeScript** y el SDK oficial de **Supabase** para interactuar con la base de datos aislada.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Reglas Arquitectónicas e Integración
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+1. **Base de Datos Aislada**: Las consultas apuntan estrictamente al esquema `company_db` (o `public` según configuración) de Supabase utilizando `@supabase/supabase-js`. Está prohibida la comunicación con tablas de otros servicios.
+2. **Seguridad**: Todos los endpoints REST están protegidos por el guardián de autorización [JwtAuthGuard](file:///Users/jafetquiroga/arquitectura_software/practica3/microservices/ms-company/src/branch/guards/jwt-auth.guard.ts) que valida los tokens portadores del cliente.
+3. **Rol en la Defensa**: Permite crear la compañía corporativa principal y definir los puntos geográficos de las sucursales donde se venderá y transferirá mercadería (Pasos 1 y 2 del flujo de defensa).
 
-## Project setup
+---
 
-```bash
-$ npm install
+## 📊 Estructura de Base de Datos
+
+El servicio interactúa con las siguientes tablas dentro de la base de datos:
+
+### 1. Tabla `companias`
+* `id_compania` (UUID, Primary Key)
+* `nombre` (Varchar)
+
+### 2. Tabla `ciudades`
+* `id_ciudad` (UUID, Primary Key)
+* `nombre` (Varchar)
+
+### 3. Tabla `sucursales`
+* `id_sucursal` (UUID, Primary Key)
+* `id_compania` (UUID, Foreign Key)
+* `id_ciudad` (UUID, Foreign Key)
+* `nombre` (Varchar)
+* `direccion` (Varchar)
+
+---
+
+## 🛠️ Endpoints REST expuestos (Puerto 3006)
+
+Todos los endpoints requieren un token JWT válido en la cabecera `Authorization: Bearer <token>`.
+
+### 1. `GET /companies`
+Retorna el listado de compañías registradas en el sistema.
+
+### 2. `GET /cities`
+Retorna el listado de ciudades operativas.
+
+### 3. `GET /branches`
+Retorna la lista de todas las sucursales registradas a nivel nacional.
+
+### 4. `POST /branches`
+Crea una nueva sucursal asignada a una compañía y a una ciudad.
+* **Cuerpo de la Petición (DTO: `CreateBranchDto`)**:
+  ```json
+  {
+    "id_compania": "a1c49929-1065-4f36-96b6-f5ffb6a37885",
+    "id_ciudad": "5f3a0937-2cfc-4bf0-80d4-1a986c7b3370",
+    "nombre": "Sucursal Prado",
+    "direccion": "Av. 16 de Julio (El Prado), La Paz"
+  }
+  ```
+
+### 5. `PUT /branches/:id`
+Actualiza parcialmente los datos de una sucursal existente.
+* **Parámetro**: `:id` (UUID v4 de la sucursal).
+* **Cuerpo de la Petición (DTO: `UpdateBranchDto`)**:
+  ```json
+  {
+    "nombre": "Sucursal Prado Renovada",
+    "direccion": "Av. 16 de Julio Nro 123, La Paz"
+  }
+  ```
+
+---
+
+## ⚙️ Configuración e Instalación
+
+### Variables de Entorno (`.env`)
+Configura las variables de conexión en la raíz del microservicio:
+```env
+PORT=3006
+JWT_SECRET=default-jwt-secret-key-erp-supermarket
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_KEY=tu-service-role-o-anon-key
+SUPABASE_SCHEMA=company_db
 ```
 
-## Compile and run the project
-
+### Ejecutar Localmente
 ```bash
-# development
-$ npm run start
+# Instalar dependencias
+npm install
 
-# watch mode
-$ npm run start:dev
+# Modo desarrollo
+npm run start:dev
 
-# production mode
-$ npm run start:prod
+# Compilación y producción
+npm run build
+npm run start:prod
 ```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).

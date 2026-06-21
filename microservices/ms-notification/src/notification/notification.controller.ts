@@ -29,4 +29,20 @@ export class NotificationController {
   async handleSaleCompleted(@Payload() data: any) {
     await this.notificationService.processSaleCompleted(data);
   }
+
+  /**
+   * Suscriptor asíncrono RabbitMQ para recibir transferencias completadas.
+   */
+  @EventPattern('TransferCompleted')
+  async handleTransferCompleted(@Payload() data: any) {
+    await this.notificationService.processTransferCompleted(data);
+  }
+
+  /**
+   * Suscriptor asíncrono RabbitMQ para recibir asignaciones de puntos.
+   */
+  @EventPattern('PointsAssigned')
+  async handlePointsAssigned(@Payload() data: any) {
+    await this.notificationService.processPointsAssigned(data);
+  }
 }

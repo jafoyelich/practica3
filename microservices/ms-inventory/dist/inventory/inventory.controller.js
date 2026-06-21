@@ -20,6 +20,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const inventory_service_1 = require("./inventory.service");
 const register_loss_dto_1 = require("./dto/register-loss.dto");
 const transfer_stock_dto_1 = require("./dto/transfer-stock.dto");
+const register_input_dto_1 = require("./dto/register-input.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 let InventoryController = class InventoryController {
     inventoryService;
@@ -35,6 +36,13 @@ let InventoryController = class InventoryController {
     async getStock(id_producto, id_sucursal) {
         const stock = await this.inventoryService.getProductStock(id_producto, id_sucursal);
         return { id_producto, id_sucursal, stock };
+    }
+    async getConsolidatedStock(id_producto) {
+        const total = await this.inventoryService.getConsolidatedStock(id_producto);
+        return { id_producto, total };
+    }
+    async registerInput(dto) {
+        return await this.inventoryService.registerInput(dto);
     }
     async registerLoss(dto) {
         return await this.inventoryService.registerLoss(dto);
@@ -94,6 +102,32 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], InventoryController.prototype, "getStock", null);
+__decorate([
+    (0, common_1.Get)('balance/:id_producto/consolidated'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Consultar el stock consolidado total de un producto en todas las sucursales' }),
+    (0, swagger_1.ApiParam)({ name: 'id_producto', description: 'UUID del producto', type: String }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Cantidad total consolidada.' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado.' }),
+    __param(0, (0, common_1.Param)('id_producto', new common_1.ParseUUIDPipe({ version: '4' }))),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], InventoryController.prototype, "getConsolidatedStock", null);
+__decorate([
+    (0, common_1.Post)('input'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Registrar un ingreso de inventario individual manual' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Ingreso registrado con éxito y Kardex anotado.' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Parámetros inválidos.' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado.' }),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ transform: true, whitelist: true }))),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [register_input_dto_1.RegisterInputDto]),
+    __metadata("design:returntype", Promise)
+], InventoryController.prototype, "registerInput", null);
 __decorate([
     (0, common_1.Post)('loss'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

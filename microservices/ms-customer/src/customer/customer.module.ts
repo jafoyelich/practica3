@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CustomerController } from './customer.controller';
 import { CustomerService } from './customer.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -16,6 +17,26 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
         signOptions: { expiresIn: '24h' },
       }),
     }),
+    ClientsModule.registerAsync([
+      {
+        name: 'RABBITMQ_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              configService.get<string>('RABBITMQ_URL') ||
+                'amqp://localhost:5672',
+            ],
+            queue: 'customer_queue',
+            queueOptions: {
+              durable: true,
+            },
+          },
+        }),
+      },
+    ]),
   ],
   controllers: [CustomerController],
   providers: [CustomerService, JwtAuthGuard],

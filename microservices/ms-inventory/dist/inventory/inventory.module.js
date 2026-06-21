@@ -10,6 +10,7 @@ exports.InventoryModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
+const microservices_1 = require("@nestjs/microservices");
 const inventory_controller_1 = require("./inventory.controller");
 const inventory_service_1 = require("./inventory.service");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
@@ -28,6 +29,26 @@ exports.InventoryModule = InventoryModule = __decorate([
                     signOptions: { expiresIn: '24h' },
                 }),
             }),
+            microservices_1.ClientsModule.registerAsync([
+                {
+                    name: 'RABBITMQ_SERVICE',
+                    imports: [config_1.ConfigModule],
+                    inject: [config_1.ConfigService],
+                    useFactory: (configService) => ({
+                        transport: microservices_1.Transport.RMQ,
+                        options: {
+                            urls: [
+                                configService.get('RABBITMQ_URL') ||
+                                    'amqp://localhost:5672',
+                            ],
+                            queue: 'inventory_queue',
+                            queueOptions: {
+                                durable: true,
+                            },
+                        },
+                    }),
+                },
+            ]),
         ],
         controllers: [inventory_controller_1.InventoryController],
         providers: [inventory_service_1.InventoryService, jwt_auth_guard_1.JwtAuthGuard],

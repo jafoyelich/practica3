@@ -4,8 +4,10 @@ import {
   HttpStatus,
   Logger,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ClientProxy } from '@nestjs/microservices';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { AssignPointsDto } from './dto/assign-points.dto';
@@ -15,7 +17,10 @@ export class CustomerService {
   private readonly supabaseClient: SupabaseClient<any, any, any>;
   private readonly logger = new Logger(CustomerService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('RABBITMQ_SERVICE') private readonly rabbitClient: ClientProxy,
+  ) {
     const supabaseUrl =
       this.configService.get<string>('SUPABASE_URL') ||
       'https://placeholder.supabase.co';
@@ -166,6 +171,14 @@ export class CustomerService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+
+    this.rabbitClient.emit('PointsAssigned', {
+      id_cliente: id,
+      puntos_asignados: dto.puntos,
+      nuevos_puntos: nuevosPuntos,
+      motivo: dto.motivo,
+      timestamp: new Date().toISOString(),
+    });
 
     return {
       message: 'Puntos asignados con éxito',

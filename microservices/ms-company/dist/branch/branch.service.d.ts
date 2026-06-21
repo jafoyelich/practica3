@@ -17,4 +17,10 @@ export declare class BranchService {
         message: string;
         branch: any;
     }>;
+    createCompany(dto: {
+        nombre: string;
+    }): Promise<{
+        message: string;
+        company: any;
+    }>;
 }

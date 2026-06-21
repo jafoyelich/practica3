@@ -1,6 +1,7 @@
 import { InventoryService } from './inventory.service';
 import { RegisterLossDto } from './dto/register-loss.dto';
 import { TransferStockDto } from './dto/transfer-stock.dto';
+import { RegisterInputDto } from './dto/register-input.dto';
 export declare class InventoryController {
     private readonly inventoryService;
     constructor(inventoryService: InventoryService);
@@ -13,6 +14,14 @@ export declare class InventoryController {
         id_producto: string;
         id_sucursal: string;
         stock: number;
+    }>;
+    getConsolidatedStock(id_producto: string): Promise<{
+        id_producto: string;
+        total: number;
+    }>;
+    registerInput(dto: RegisterInputDto): Promise<{
+        message: string;
+        data: any;
     }>;
     registerLoss(dto: RegisterLossDto): Promise<{
         message: string;

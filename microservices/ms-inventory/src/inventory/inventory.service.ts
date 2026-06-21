@@ -1,5 +1,6 @@
-import { Injectable, HttpException, HttpStatus, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger, BadRequestException, InternalServerErrorException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ClientProxy } from '@nestjs/microservices';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import { RegisterLossDto } from './dto/register-loss.dto';
@@ -16,7 +17,10 @@ export class InventoryService {
   private readonly supabaseClient: SupabaseClient<any, any, any>;
   private readonly logger = new Logger(InventoryService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject('RABBITMQ_SERVICE') private readonly rabbitClient: ClientProxy,
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
 
@@ -128,6 +132,12 @@ export class InventoryService {
         results.push(updateResult);
       }
 
+      this.rabbitClient.emit('InventoryLoaded', {
+        tipo: 'excel',
+        filas_procesadas: rows.length,
+        timestamp: new Date().toISOString(),
+      });
+
       return {
         message: 'Carga de inventario finalizada con éxito.',
         filas_procesadas: rows.length,
@@ -214,6 +224,16 @@ export class InventoryService {
 
     if (kardexError) {
       this.logger.error(`Error al registrar Kardex para merma: ${kardexError.message}`);
+    }
+
+    if (nuevoSaldo < 10) {
+      this.rabbitClient.emit('StockLow', {
+        id_producto: dto.id_producto,
+        id_sucursal: dto.id_sucursal,
+        saldo: nuevoSaldo,
+        limite: 10,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     return {
@@ -338,6 +358,24 @@ export class InventoryService {
       this.logger.error(`Error al registrar Kardex destino: ${kardexDestErr.message}`);
     }
 
+    this.rabbitClient.emit('TransferCompleted', {
+      id_producto: dto.id_producto,
+      id_sucursal_origen: dto.id_sucursal_origen,
+      id_sucursal_destino: dto.id_sucursal_destino,
+      cantidad: dto.cantidad,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (nuevoSaldoOrigen < 10) {
+      this.rabbitClient.emit('StockLow', {
+        id_producto: dto.id_producto,
+        id_sucursal: dto.id_sucursal_origen,
+        saldo: nuevoSaldoOrigen,
+        limite: 10,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     return {
       message: 'Transferencia realizada con éxito.',
       id_producto: dto.id_producto,
@@ -440,11 +478,129 @@ export class InventoryService {
           this.logger.error(`Error al guardar Kardex de venta ${id_venta}: ${kardexError.message}`);
         }
 
+        if (nuevoSaldo < 10) {
+          this.rabbitClient.emit('StockLow', {
+            id_producto,
+            id_sucursal,
+            saldo: nuevoSaldo,
+            limite: 10,
+            timestamp: new Date().toISOString(),
+          });
+        }
+
         this.logger.log(`Descontado stock con éxito: Producto ${id_producto}, Cantidad: ${cantidad}, Saldo restante: ${nuevoSaldo}`);
 
       } catch (error) {
         this.logger.error(`Fallo al descontar stock por venta para producto ${id_producto}: ${error.message}`);
       }
     }
+  }
+
+  /**
+   * Obtiene el stock consolidado de un producto sumando las existencias en todas las sucursales.
+   */
+  async getConsolidatedStock(id_producto: string): Promise<number> {
+    this.logger.log(`Consultando stock consolidado para producto: ${id_producto}`);
+    
+    const { data, error } = await this.supabaseClient
+      .from('stock_sucursal')
+      .select('cantidad')
+      .eq('id_producto', id_producto);
+
+    if (error) {
+      this.logger.error(`Error al consultar stock consolidado: ${error.message}`);
+      throw new InternalServerErrorException(`Error al obtener stock consolidado: ${error.message}`);
+    }
+
+    if (!data) return 0;
+    const total = data.reduce((acc, row) => acc + Number(row.cantidad), 0);
+    return total;
+  }
+
+  /**
+   * Registra un ingreso individual de inventario manualmente.
+   */
+  async registerInput(dto: { id_sucursal: string; id_producto: string; cantidad: number }) {
+    const { id_sucursal, id_producto, cantidad } = dto;
+    if (!id_sucursal || !id_producto || cantidad === undefined || cantidad <= 0) {
+      throw new BadRequestException('Formato de entrada inválido. Debe contener: id_sucursal, id_producto, cantidad (mayor a 0).');
+    }
+
+    this.logger.log(`Registrando ingreso manual de inventario para producto ${id_producto} en sucursal ${id_sucursal}`);
+
+    // Consultar stock actual
+    const { data: currentStock, error: getError } = await this.supabaseClient
+      .from('stock_sucursal')
+      .select('*')
+      .eq('id_sucursal', id_sucursal)
+      .eq('id_producto', id_producto)
+      .maybeSingle();
+
+    if (getError) {
+      throw new InternalServerErrorException(`Error al consultar stock actual: ${getError.message}`);
+    }
+
+    let nuevoSaldo = cantidad;
+    let updateResult;
+
+    if (currentStock) {
+      nuevoSaldo = Number(currentStock.cantidad) + cantidad;
+      const { data, error: updateError } = await this.supabaseClient
+         .from('stock_sucursal')
+         .update({ cantidad: nuevoSaldo })
+         .eq('id_stock', currentStock.id_stock)
+         .select()
+         .single();
+
+      if (updateError) {
+        throw new InternalServerErrorException(`Error al actualizar stock: ${updateError.message}`);
+      }
+      updateResult = data;
+    } else {
+      const { data, error: insertError } = await this.supabaseClient
+         .from('stock_sucursal')
+         .insert({
+           id_sucursal,
+           id_producto,
+           cantidad: nuevoSaldo,
+         })
+         .select()
+         .single();
+
+      if (insertError) {
+        throw new InternalServerErrorException(`Error al insertar stock: ${insertError.message}`);
+      }
+      updateResult = data;
+    }
+
+    // Registrar en Kardex
+    const { error: kardexError } = await this.supabaseClient
+      .from('kardex')
+      .insert({
+        id_sucursal,
+        id_producto,
+        tipo_movimiento: 'INGRESO',
+        cantidad: cantidad,
+        motivo: 'Ingreso manual individual',
+      });
+
+    if (kardexError) {
+      this.logger.error(`Error al registrar Kardex para ingreso manual: ${kardexError.message}`);
+    }
+
+    // Emitimos evento InventoryLoaded (al finalizar de cargar el excel/input)
+    this.rabbitClient.emit('InventoryLoaded', {
+      id_sucursal,
+      id_producto,
+      cantidad,
+      tipo: 'manual',
+      nuevo_saldo: nuevoSaldo,
+      timestamp: new Date().toISOString()
+    });
+
+    return {
+      message: 'Ingreso de inventario registrado con éxito.',
+      data: updateResult
+    };
   }
 }

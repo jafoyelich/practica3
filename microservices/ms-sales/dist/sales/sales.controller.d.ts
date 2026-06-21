@@ -9,5 +9,13 @@ export declare class SalesController {
         data: any;
     }>;
     findAll(): Promise<any[]>;
+    getDailyReport(date: string): Promise<{
+        fecha: string;
+        total_consolidado: number;
+        ingresos_por_metodo_pago: {
+            tipo_pago: string;
+            total: number;
+        }[];
+    }>;
     findOne(id: string): Promise<any>;
 }

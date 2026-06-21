@@ -1,11 +1,13 @@
 import { ConfigService } from '@nestjs/config';
+import { ClientProxy } from '@nestjs/microservices';
 import { RegisterLossDto } from './dto/register-loss.dto';
 import { TransferStockDto } from './dto/transfer-stock.dto';
 export declare class InventoryService {
     private readonly configService;
+    private readonly rabbitClient;
     private readonly supabaseClient;
     private readonly logger;
-    constructor(configService: ConfigService);
+    constructor(configService: ConfigService, rabbitClient: ClientProxy);
     loadExcel(fileBuffer: Buffer): Promise<{
         message: string;
         filas_procesadas: number;
@@ -33,4 +35,13 @@ export declare class InventoryService {
     }>;
     getKardexHistory(id_sucursal: string): Promise<any[]>;
     handleSaleCompletedEvent(payload: any): Promise<void>;
+    getConsolidatedStock(id_producto: string): Promise<number>;
+    registerInput(dto: {
+        id_sucursal: string;
+        id_producto: string;
+        cantidad: number;
+    }): Promise<{
+        message: string;
+        data: any;
+    }>;
 }

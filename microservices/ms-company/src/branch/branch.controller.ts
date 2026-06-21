@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Body, Param, UseGuards, ValidationPipe, Par
 import { BranchService } from './branch.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
+import { CreateCompanyDto } from './dto/create-company.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller()
@@ -12,6 +13,13 @@ export class BranchController {
   @Get('companies')
   async getCompanies() {
     return await this.branchService.getCompanies();
+  }
+
+  @Post('companies')
+  async createCompany(
+    @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: CreateCompanyDto,
+  ) {
+    return await this.branchService.createCompany(dto);
   }
 
   @Get('cities')

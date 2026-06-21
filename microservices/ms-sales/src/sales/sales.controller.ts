@@ -8,6 +8,7 @@ import {
   ValidationPipe,
   ParseUUIDPipe,
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -55,6 +56,20 @@ export class SalesController {
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
   async findAll() {
     return await this.salesService.findAllSales();
+  }
+
+  @Get('reports/daily')
+  @ApiOperation({
+    summary: 'Obtener reporte consolidado de ingresos del día agrupado por tipo de pago',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reporte consolidado devuelto con éxito.',
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
+  async getDailyReport(@Query('date') date: string) {
+    return await this.salesService.getDailyReport(date);
   }
 
   @Get(':id')

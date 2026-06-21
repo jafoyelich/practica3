@@ -5,6 +5,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { InventoryService } from './inventory.service';
 import { RegisterLossDto } from './dto/register-loss.dto';
 import { TransferStockDto } from './dto/transfer-stock.dto';
+import { RegisterInputDto } from './dto/register-input.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('inventory')
@@ -56,6 +57,33 @@ export class InventoryController {
   ) {
     const stock = await this.inventoryService.getProductStock(id_producto, id_sucursal);
     return { id_producto, id_sucursal, stock };
+  }
+
+  @Get('balance/:id_producto/consolidated')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Consultar el stock consolidado total de un producto en todas las sucursales' })
+  @ApiParam({ name: 'id_producto', description: 'UUID del producto', type: String })
+  @ApiResponse({ status: 200, description: 'Cantidad total consolidada.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  async getConsolidatedStock(
+    @Param('id_producto', new ParseUUIDPipe({ version: '4' })) id_producto: string,
+  ) {
+    const total = await this.inventoryService.getConsolidatedStock(id_producto);
+    return { id_producto, total };
+  }
+
+  @Post('input')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Registrar un ingreso de inventario individual manual' })
+  @ApiResponse({ status: 201, description: 'Ingreso registrado con éxito y Kardex anotado.' })
+  @ApiResponse({ status: 400, description: 'Parámetros inválidos.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  async registerInput(
+    @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: RegisterInputDto,
+  ) {
+    return await this.inventoryService.registerInput(dto);
   }
 
   @Post('loss')

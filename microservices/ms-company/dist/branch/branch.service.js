@@ -124,6 +124,24 @@ let BranchService = BranchService_1 = class BranchService {
             branch: data,
         };
     }
+    async createCompany(dto) {
+        this.logger.log(`Creando compañía: ${dto.nombre}`);
+        const { data, error } = await this.supabaseClient
+            .from('companias')
+            .insert({
+            nombre: dto.nombre,
+        })
+            .select()
+            .single();
+        if (error) {
+            this.logger.error(`Error al crear compañía: ${error.message}`);
+            throw new common_1.BadRequestException(`No se pudo crear la compañía: ${error.message}`);
+        }
+        return {
+            message: 'Compañía creada exitosamente.',
+            company: data,
+        };
+    }
 };
 exports.BranchService = BranchService;
 exports.BranchService = BranchService = BranchService_1 = __decorate([

@@ -157,4 +157,56 @@ export class NotificationService {
 
     await Promise.allSettled(tasks);
   }
+
+  /**
+   * Procesa la notificación al recibir el evento asíncrono 'TransferCompleted' de RabbitMQ.
+   */
+  async processTransferCompleted(event: any): Promise<void> {
+    const { id_producto, id_sucursal_origen, id_sucursal_destino, cantidad } = event;
+    this.logger.log(`Procesando notificación para transferencia completada. Producto: ${id_producto}, Origen: ${id_sucursal_origen}, Destino: ${id_sucursal_destino}`);
+
+    const contenido = `Se ha completado la transferencia de ${cantidad} unidades del producto ${id_producto} desde la sucursal ${id_sucursal_origen} hacia la sucursal ${id_sucursal_destino}.`;
+
+    this.logger.log(`[NOTIFICACIÓN DE TRANSFERENCIA - SIMULACIÓN]: "${contenido}"`);
+
+    try {
+      await this.notificationRepository.insertRegistro({
+        id_venta: '00000000-0000-0000-0000-000000000000',
+        id_cliente: '00000000-0000-0000-0000-000000000000',
+        tipo: 'EMAIL',
+        destinatario: 'ADMINISTRADORES',
+        mensaje: contenido,
+        estado: 'SENT',
+      });
+      this.logger.log('Notificación de transferencia guardada en base de datos.');
+    } catch (error: any) {
+      this.logger.error(`Fallo al registrar notificación de transferencia: ${error.message}`);
+    }
+  }
+
+  /**
+   * Procesa la notificación al recibir el evento asíncrono 'PointsAssigned' de RabbitMQ.
+   */
+  async processPointsAssigned(event: any): Promise<void> {
+    const { id_cliente, puntos_asignados, nuevos_puntos, motivo } = event;
+    this.logger.log(`Procesando notificación de puntos asignados. Cliente: ${id_cliente}, Puntos: ${puntos_asignados}`);
+
+    const contenido = `¡Felicidades! Se te han asignado ${puntos_asignados} puntos de fidelidad por motivo de: ${motivo || 'acumulación general'}. Tu nuevo saldo es de ${nuevos_puntos} puntos.`;
+
+    this.logger.log(`[NOTIFICACIÓN DE PUNTOS - SIMULACIÓN]: "${contenido}"`);
+
+    try {
+      await this.notificationRepository.insertRegistro({
+        id_venta: '00000000-0000-0000-0000-000000000000',
+        id_cliente: id_cliente,
+        tipo: 'SMS',
+        destinatario: 'CLIENTE',
+        mensaje: contenido,
+        estado: 'SENT',
+      });
+      this.logger.log(`Notificación de puntos guardada en base de datos para cliente ${id_cliente}`);
+    } catch (error: any) {
+      this.logger.error(`Fallo al registrar notificación de puntos: ${error.message}`);
+    }
+  }
 }

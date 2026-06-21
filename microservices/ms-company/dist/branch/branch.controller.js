@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const branch_service_1 = require("./branch.service");
 const create_branch_dto_1 = require("./dto/create-branch.dto");
 const update_branch_dto_1 = require("./dto/update-branch.dto");
+const create_company_dto_1 = require("./dto/create-company.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 let BranchController = class BranchController {
     branchService;
@@ -25,6 +26,9 @@ let BranchController = class BranchController {
     }
     async getCompanies() {
         return await this.branchService.getCompanies();
+    }
+    async createCompany(dto) {
+        return await this.branchService.createCompany(dto);
     }
     async getCities() {
         return await this.branchService.getCities();
@@ -46,6 +50,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], BranchController.prototype, "getCompanies", null);
+__decorate([
+    (0, common_1.Post)('companies'),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ transform: true, whitelist: true }))),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_company_dto_1.CreateCompanyDto]),
+    __metadata("design:returntype", Promise)
+], BranchController.prototype, "createCompany", null);
 __decorate([
     (0, common_1.Get)('cities'),
     __metadata("design:type", Function),

@@ -30,6 +30,9 @@ let SalesController = class SalesController {
     async findAll() {
         return await this.salesService.findAllSales();
     }
+    async getDailyReport(date) {
+        return await this.salesService.getDailyReport(date);
+    }
     async findOne(id) {
         return await this.salesService.findSaleById(id);
     }
@@ -64,6 +67,22 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SalesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('reports/daily'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener reporte consolidado de ingresos del día agrupado por tipo de pago',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Reporte consolidado devuelto con éxito.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado.' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: 'Error interno del servidor.' }),
+    __param(0, (0, common_1.Query)('date')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], SalesController.prototype, "getDailyReport", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({
