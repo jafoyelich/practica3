@@ -4,6 +4,7 @@
   "description": "Espacio de trabajo raíz para el ERP SuperMarket Bolivia S.A.",
   "private": true,
   "scripts": {
+    "install:all": "npm install && npm --prefix microservices/ms-gateway install && npm --prefix microservices/ms-sales install && npm --prefix microservices/ms-customer install && npm --prefix microservices/ms-inventory install && npm --prefix microservices/ms-product install && npm --prefix microservices/ms-notification install && npm --prefix microservices/ms-company install && npm --prefix apps/web-admin install",
     "infra:up": "docker-compose up -d rabbitmq redis",
     "infra:down": "docker-compose stop rabbitmq redis",
     "docker:up": "docker-compose up -d --build",
@@ -17,7 +18,6 @@
     "start:company": "npm --prefix microservices/ms-company run start:dev",
     "start:frontend": "npm --prefix apps/web-admin run dev",
     "dev:all": "npm run infra:up && concurrently -k -p \"[{name}]\" -n \"GATEWAY,SALES,CUSTOMER,INVENTORY,PRODUCT,NOTIFICATION,COMPANY,FRONTEND\" -c \"magenta,cyan,blue,green,yellow,red,gray,white\" \"npm run start:gateway\" \"npm run start:sales\" \"npm run start:customer\" \"npm run start:inventory\" \"npm run start:product\" \"npm run start:notification\" \"npm run start:company\" \"npm run start:frontend\""
-
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

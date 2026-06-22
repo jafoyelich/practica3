@@ -106,10 +106,10 @@ flowchart TB
 > [!IMPORTANT]
 > **¿Problemas con Docker en tu máquina local?** Si no puedes iniciar Docker Desktop o tienes fallos en contenedores, revisa el archivo alternativo [READMEnoDocker.md](file:///Users/jafetquiroga/arquitectura_software/practica3/READMEnoDocker.md) para aprender a ejecutar la infraestructura con servicios gratuitos en la nube o instalaciones locales nativas sin depender de Docker.
 
-### Paso 1. Clonar e Instalar Dependencias del Espacio de Trabajo
-Ejecuta la instalación inicial en el directorio raíz del proyecto para descargar `concurrently` y configurar las dependencias cruzadas:
+### Paso 1. Instalar Dependencias del Espacio de Trabajo y Microservicios
+Para descargar e instalar simultáneamente todas las dependencias en la raíz, en el frontend y en cada uno de los microservicios, ejecuta en la terminal de la raíz:
 ```bash
-npm install
+npm run install:all
 ```
 
 ### Paso 2. Configurar Variables de Entorno (`.env`)

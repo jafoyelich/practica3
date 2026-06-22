@@ -88,10 +88,10 @@ Si prefieres tener el entorno corriendo en tu propia computadora local de forma 
 
 Una vez que tengas RabbitMQ y Redis iniciados (ya sea de forma local o en la nube), el proceso de arranque es el siguiente:
 
-### Paso 1: Instalar dependencias en la raíz
-Ubícate en la raíz del proyecto y ejecuta:
+### Paso 1: Instalar dependencias globales y de servicios
+Ubícate en la raíz del proyecto y ejecuta el siguiente comando para descargar e instalar automáticamente todas las dependencias del proyecto, del frontend y de cada uno de los microservicios:
 ```bash
-npm install
+npm run install:all
 ```
 
 ### Paso 2: Crear los archivos `.env`
