@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { Menu, Store } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function DashboardLayout({
   children,
@@ -46,11 +47,20 @@ export default function DashboardLayout({
         
         {/* Topbar for mobile screens */}
         <header className="md:hidden bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center space-x-3">
+          <div
+            onClick={() => {
+              console.log('click');
+              router.push('/');
+            }}
+            className="flex items-center space-x-3 cursor-pointer"
+            style={{ cursor: 'pointer' }}
+          >
             <div className="bg-blue-600 p-1.5 rounded-lg text-white">
               <Store className="h-5 w-5" />
             </div>
-            <h1 className="font-bold text-base text-slate-200">ERP / POS</h1>
+            <h1 className="font-bold text-base text-slate-200">
+              ERP / POS
+            </h1>
           </div>
           <button 
             onClick={() => setIsMobileOpen(true)}

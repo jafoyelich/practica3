@@ -47,15 +47,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile = false, onCloseM
         {/* Header Logotipo */}
         <div>
           <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-600 p-2 rounded-lg text-white">
-                <Store className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="font-bold text-lg leading-none">ERP / POS</h1>
-                <span className="text-[10px] text-slate-400">Panel Corporativo</span>
-              </div>
-            </div>
+  <Link
+    href="/"
+    className="flex items-center space-x-3 cursor-pointer hover:opacity-90 transition-opacity"
+  >
+    <div className="bg-blue-600 p-2 rounded-lg text-white">
+      <Store className="h-6 w-6" />
+    </div>
+    <div>
+      <h1 className="font-bold text-lg leading-none">ERP / POS</h1>
+      <span className="text-[10px] text-slate-400">Panel Corporativo</span>
+    </div>
+  </Link>
             {/* Close button for mobile */}
             {onCloseMobile && (
               <button 
